@@ -248,10 +248,16 @@ export default function UserDashboard() {
                 </div>
                 <AnimatePresence>
                     {isOpen && (
-                        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="absolute top-full left-0 right-0 mt-2 bg-slate-50/95 backdrop-blur-3xl border border-slate-300 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] z-[500] max-h-48 overflow-y-auto p-1 custom-scrollbar">
+                        <motion.div 
+                            initial={{ opacity: 0, y: -10 }} 
+                            animate={{ opacity: 1, y: 0 }} 
+                            exit={{ opacity: 0, y: -10 }} 
+                            className="absolute top-full left-0 right-0 mt-2 bg-white/95 backdrop-blur-3xl border border-slate-300 rounded-2xl shadow-[0_30px_60px_rgba(0,0,0,0.4)] z-[2000] max-h-72 overflow-y-auto p-2 custom-scrollbar space-y-1"
+                        >
                             {KIIT_LOCATIONS.map(loc => (
-                                <div key={loc.id} onClick={() => { onChange(loc.id); setIsOpen(false); }} className={`p-3 rounded-xl text-[10px] font-black uppercase tracking-widest cursor-pointer transition-colors ${value === loc.id ? 'bg-ev-blue text-white shadow-lg' : 'hover:bg-slate-100 text-slate-400'}`}>{loc.name}</div>
+                                <div key={loc.id} onClick={() => { onChange(loc.id); setIsOpen(false); }} className={`p-4 rounded-xl text-[11px] font-black uppercase tracking-widest cursor-pointer transition-all active:scale-[0.98] ${value === loc.id ? 'bg-primary-500 text-white shadow-lg' : 'hover:bg-slate-100 text-slate-500'}`}>{loc.name}</div>
                             ))}
+                            <div className="h-4" /> {/* Extra bottom padding for mobile scroll safety */}
                         </motion.div>
                     )}
                 </AnimatePresence>
@@ -261,7 +267,7 @@ export default function UserDashboard() {
 
     return (
         <div className="h-[100dvh] w-full lg:flex lg:flex-row bg-slate-50 overflow-hidden font-sans text-slate-900 relative">
-            <div className="absolute lg:relative top-0 left-0 w-full max-h-[55vh] lg:max-h-none lg:h-full lg:w-[420px] bg-white border-b lg:border-r lg:border-b-0 border-slate-300 p-4 pb-6 lg:p-10 flex flex-col gap-4 lg:gap-8 z-[100] shrink-0 shadow-[0_20px_50px_rgba(0,0,0,0.2)] rounded-b-[2rem] lg:rounded-none overflow-hidden">
+            <div className="absolute lg:relative top-0 left-0 w-full max-h-[55vh] lg:max-h-none lg:h-full lg:w-[420px] bg-white border-b lg:border-r lg:border-b-0 border-slate-300 p-4 pb-6 lg:p-10 flex flex-col gap-4 lg:gap-8 z-[100] shrink-0 shadow-[0_20px_50px_rgba(0,0,0,0.2)] rounded-b-[2rem] lg:rounded-none overflow-visible">
                 <header className="flex justify-between items-center mb-10">
                     <div className="flex items-center gap-4">
                         {(view !== 'main' && status === 'idle') && <button onClick={() => setView('main')} className="p-3 bg-slate-100 rounded-2xl border border-slate-300"><Navigation className="rotate-[-90deg] w-4 h-4 text-slate-500" /></button>}
