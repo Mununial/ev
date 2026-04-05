@@ -72,10 +72,12 @@ function AuthPage() {
          if (!success) setError('Invalid OTP or validation error.');
       }
     } else if (authMode === 'forgot') {
-      if (formData.newPassword !== formData.confirmPassword) { setError('Passwords do not match'); return; }
       const success = await forgotPassword(formData.email);
-      if (success) { setAuthMode('otp'); setOtpContext('forgot'); }
-      else setError('Failed to send OTP. Ensure the email is registered.');
+      if (success) { 
+          alert('Check your inbox! Firebase has sent a password reset link to your email.');
+          setAuthMode('login'); 
+      }
+      else setError('Failed to initiate reset. Ensure the email is registered.');
     }
   };
 
