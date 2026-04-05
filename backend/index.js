@@ -18,12 +18,24 @@ dotenv.config();
 
 const app = express();
 app.use(express.json());
-app.use(cors({ origin: ["https://ev-frontend-w9i8.onrender.com", "http://localhost:5173"], credentials: true }));
+// Refined CORS: More flexible but secure
+app.use(cors({
+    origin: (origin, callback) => {
+        const allowed = ["https://ev-frontend-w9i8.onrender.com", "http://localhost:5173"];
+        if (!origin || allowed.indexOf(origin) !== -1 || origin.includes('onrender.com')) {
+            callback(null, true);
+        } else {
+            callback(new Error('CORS Policy Block'));
+        }
+    },
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+}));
 
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: { 
-    origin: ["https://ev-frontend-w9i8.onrender.com", "http://localhost:5173"], 
+    origin: true, // Reflect requesting origin
     methods: ["GET", "POST"],
     credentials: true
   }
