@@ -253,7 +253,7 @@ app.post('/admin/create-pilot', async (req, res) => {
 });
 
 async function handleCreatePilot(req, res) {
-    const { name, email, password, vehicleType, vehicleNumber } = req.body;
+    const { name, email, password, vehicleType, vehicleNumber, phone } = req.body;
     
     if (!firestore) return res.status(500).json({ success: false, error: 'Firestore Admin not initialized. Check Env Variables.' });
 
@@ -268,7 +268,7 @@ async function handleCreatePilot(req, res) {
 
         const newUser = {
             uid: fUser.uid,
-            name, email, password: hashedPassword, role: 'provider', vehicleType, vehicleNumber, blocked: false
+            name, email, password: hashedPassword, role: 'provider', vehicleType, vehicleNumber, phone, blocked: false
         };
         
         await firestore.collection('users').doc(fUser.uid).set(newUser);
@@ -316,7 +316,7 @@ app.post('/api/admin/toggle-block-pilot', async (req, res) => {
 
 // Auth Register (Uses Firestore)
 app.post('/api/auth/register', async (req, res) => {
-    const { name, email, password, role, vehicleType, vehicleNumber, uid } = req.body;
+    const { name, email, password, role, vehicleType, vehicleNumber, phone, uid } = req.body;
     if (!firestore) return res.status(500).json({ success: false });
 
     try {
@@ -328,7 +328,7 @@ app.post('/api/auth/register', async (req, res) => {
         const hashedPassword = bcrypt.hashSync(password, salt);
         
         const newUser = {
-            uid, name, email, password: hashedPassword, role, vehicleType: role === 'provider' ? vehicleType : null, vehicleNumber: role === 'provider' ? vehicleNumber : null, blocked: false
+            uid, name, email, password: hashedPassword, role, phone, vehicleType: role === 'provider' ? vehicleType : null, vehicleNumber: role === 'provider' ? vehicleNumber : null, blocked: false
         };
         
         await userRef.set(newUser);

@@ -14,6 +14,7 @@ export default function ProviderDashboard() {
     const [status, setStatus] = useState<'idle' | 'pending' | 'accepted' | 'ongoing'>('idle');
     const [rideRequest, setRideRequest] = useState<any>(null);
     const [location, setLocation] = useState<[number, number]>([CAMPUS_CENTER.lat, CAMPUS_CENTER.lng]);
+    const [history, setHistory] = useState<any[]>([]);
     const [battery, setBattery] = useState(Math.floor(70 + Math.random() * 20));
     const [otpInput, setOtpInput] = useState('');
     const [otpError, setOtpError] = useState(false);
@@ -23,6 +24,17 @@ export default function ProviderDashboard() {
     const [view, setView] = useState<'main' | 'stats'>('main');
     const [showSOS, setShowSOS] = useState(false);
     const [earnings] = useState({ today: '₹840', missions: 12 });
+
+    useEffect(() => {
+        const saved = localStorage.getItem('pilot_history');
+        if (saved) setHistory(JSON.parse(saved));
+    }, []);
+
+    const addToHistory = (ride: any) => {
+        const newHist = [ride, ...history].slice(0, 20);
+        setHistory(newHist);
+        localStorage.setItem('pilot_history', JSON.stringify(newHist));
+    };
 
     // Chat states
     const [isChatOpen, setIsChatOpen] = useState(false);
@@ -36,7 +48,8 @@ export default function ProviderDashboard() {
         model: user?.vehicleType === 'Bike' ? 'EV Bike' : (user?.vehicleType === 'EV' ? 'EV Car' : 'Custom Node'), 
         plate: user?.vehicleNumber || `OD-02-EV-${providerId}`, 
         battery: battery,
-        pilot: user?.name || user?.displayName || 'Authorized Pilot'
+        pilot: user?.name || user?.displayName || 'Authorized Pilot',
+        phone: user?.phone || user?.phoneNumber || '+910000000000'
     };
 
     const scrollToBottom = () => {
@@ -271,7 +284,18 @@ export default function ProviderDashboard() {
                                                 <button onClick={verifyOtp} className="w-full bg-ev-blue text-white py-5 rounded-3xl font-black text-xs uppercase tracking-widest shadow-xl">Start Ride</button>
                                             </div>
                                         ) : (
-                                            <button onClick={() => {socket.emit('update_ride_status', { rideId: rideRequest.id, status: 'completed' }); setStatus('idle'); setRideRequest(null);}} className="w-full bg-ev-green text-slate-950 py-5 rounded-3xl font-black text-xs uppercase tracking-widest shadow-xl">Terminate Successful Task</button>
+                                            <button onClick={() => {
+                                                socket.emit('update_ride_status', { rideId: rideRequest.id, status: 'completed' }); 
+                                                setStatus('idle'); 
+                                                addToHistory({ 
+                                                    id: rideRequest.id, 
+                                                    client: rideRequest.userName, 
+                                                    fare: rideRequest.fare, 
+                                                    time: new Date().toLocaleTimeString(), 
+                                                    route: `${rideRequest.pickup.name} → ${rideRequest.drop.name}` 
+                                                });
+                                                setRideRequest(null);
+                                            }} className="w-full bg-ev-green text-slate-950 py-5 rounded-3xl font-black text-xs uppercase tracking-widest shadow-xl">Terminate Successful Task</button>
                                         )}
                                     </motion.div>
                                 )}
@@ -281,18 +305,20 @@ export default function ProviderDashboard() {
                         <div className="flex flex-col gap-4">
                             <h3 className="text-xl font-black italic tracking-tighter uppercase mb-2">Archived Missions</h3>
                             <div className="grid gap-3">
-                                {[1, 2, 3].map(i => (
+                                {history.length === 0 ? (
+                                    <div className="text-[10px] text-slate-400 font-bold uppercase text-center py-10 opacity-40">No records found</div>
+                                ) : history.map((h, i) => (
                                     <div key={i} className="bg-slate-100 border border-slate-300 p-5 rounded-2xl flex flex-col gap-3">
                                         <div className="flex justify-between items-center">
                                             <span className="text-[9px] font-black uppercase tracking-widest text-ev-green bg-ev-green/10 px-3 py-1.5 rounded-lg border border-ev-green/30">Completed</span>
-                                            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Today 1{i}:30 PM</span>
+                                            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{h.time}</span>
                                         </div>
                                         <div className="flex justify-between items-end">
                                             <div>
-                                                <p className="text-xs font-bold uppercase truncate">Client Link {i}</p>
-                                                <p className="text-[10px] text-slate-500 font-bold uppercase mt-1">Campus Run</p>
+                                                <p className="text-xs font-bold uppercase truncate">{h.client}</p>
+                                                <p className="text-[10px] text-slate-500 font-bold uppercase mt-1">{h.route}</p>
                                             </div>
-                                            <p className="text-base font-black italic text-slate-900">₹{Math.floor(20 + Math.random() * 50)}</p>
+                                            <p className="text-base font-black italic text-slate-900">₹{h.fare}</p>
                                         </div>
                                     </div>
                                 ))}

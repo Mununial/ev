@@ -22,7 +22,7 @@ const MOCK_SCHEDULE: ClassSchedule[] = [
 
 export default function UserDashboard() {
     const { user, logout } = useAuth();
-    const [status, setStatus] = useState<'idle' | 'searching' | 'accepted' | 'ongoing' | 'completed'>('idle');
+    const [status, setStatus] = useState<'idle' | 'searching' | 'accepted' | 'ongoing' | 'completed' | 'cancelled'>('idle');
     const [pickup, setPickup] = useState(KIIT_LOCATIONS[0].id);
     const [drop, setDrop] = useState(KIIT_LOCATIONS[1].id);
     const [driver, setDriver] = useState<any>(null);
@@ -246,7 +246,7 @@ export default function UserDashboard() {
             id: `RIDE-${Date.now()}`,
             userId: user.uid,
             userName: user.displayName || user.name || user.email?.split('@')[0] || 'Passenger',
-            userPhone: user.phoneNumber || '+919876543210',
+            userPhone: user.phone || user.phoneNumber || '+919876543210',
             pickup: KIIT_LOCATIONS.find(l => l.id === pickup),
             drop: KIIT_LOCATIONS.find(l => l.id === drop),
             vehicleType: vehicleType,
