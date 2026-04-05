@@ -242,8 +242,17 @@ app.delete('/api/vehicles', (req, res) => {
     }
 });
 
-// Admin Pilot Creation API (Uses Firestore)
+// Admin Pilot Creation API
 app.post('/api/admin/create-pilot', async (req, res) => {
+    handleCreatePilot(req, res);
+});
+
+// Fallback for legacy frontend calls (missing /api prefix)
+app.post('/admin/create-pilot', async (req, res) => {
+    handleCreatePilot(req, res);
+});
+
+async function handleCreatePilot(req, res) {
     const { name, email, password, vehicleType, vehicleNumber } = req.body;
     
     if (!firestore) return res.status(500).json({ success: false, error: 'Firestore Admin not initialized. Check Env Variables.' });
@@ -265,10 +274,11 @@ app.post('/api/admin/create-pilot', async (req, res) => {
         await firestore.collection('users').doc(fUser.uid).set(newUser);
         res.json({ success: true, user: { uid: fUser.uid, name, role: 'provider' } });
     } catch (err) {
-        console.error('Admin Pilot Creation Final Fail:', err);
+        console.error('Admin Pilot Creation Error:', err);
         res.status(500).json({ success: false, error: err.message || 'Internal Grid Error' });
     }
-});
+}
+
 
 app.get('/api/admin/pilots', async (req, res) => {
     if (!firestore) return res.json([]);
