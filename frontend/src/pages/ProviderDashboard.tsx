@@ -146,7 +146,7 @@ export default function ProviderDashboard() {
 
     const toggleOnline = () => {
         if (!isOnline) {
-            socket.emit('provider_online', { providerId, location, vehicle });
+            socket.emit('provider_online', { providerId, location, vehicle, uid: user?.uid });
         } else {
             window.location.reload();
         }
@@ -154,7 +154,7 @@ export default function ProviderDashboard() {
     };
 
     const acceptRide = () => {
-        socket.emit('accept_ride', { rideId: rideRequest.id, providerId });
+        socket.emit('accept_ride', { rideId: rideRequest.id, providerId, uid: user?.uid });
         setStatus('accepted');
         if (rideRequest?.pickup) {
             fetchRoute(location, [rideRequest.pickup.lat, rideRequest.pickup.lng]);
