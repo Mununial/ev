@@ -6,6 +6,10 @@ const dotenv = require('dotenv');
 const nodemailer = require('nodemailer');
 const { OAuth2Client } = require('google-auth-library');
 const bcrypt = require('bcrypt');
+const dns = require('dns');
+
+// Force Node.js to use IPv4 first (fixes Render ENETUNREACH IPv6 issue)
+dns.setDefaultResultOrder('ipv4first');
 
 dotenv.config();
 
@@ -20,8 +24,9 @@ const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 // Email Transporter (Using Gmail via App Password)
 const transporter = nodemailer.createTransport({
   host: 'smtp.gmail.com',
-  port: 465,
-  secure: true,
+  port: 587,
+  secure: false, // use STARTTLS
+  requireTLS: true,
   auth: {
     user: process.env.MAIL_USERNAME,
     pass: process.env.MAIL_PASSWORD?.trim(),
