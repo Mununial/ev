@@ -55,6 +55,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         if (data.success) {
             setUser({ ...data.user, photoURL: result.user.photoURL });
+        } else if (data.status === 403 || data.error === 'Suspended.') {
+            alert('Your account is suspended by Grid Admin.');
+            setUser(null);
+            await signOut(auth);
         } else {
             // Not registered yet, create default user
             const regResp = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/register`, {

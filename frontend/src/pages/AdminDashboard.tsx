@@ -52,12 +52,16 @@ export default function AdminDashboard() {
     const handleBlockPilot = async (uid: string) => {
         if (!window.confirm('Toggle block status for this Provider profile?')) return;
         try {
-            await fetch(`${import.meta.env.VITE_API_URL}/api/admin/toggle-block-pilot`, {
+            const resp = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/toggle-block-pilot`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ uid })
             });
-            fetchPilots();
+            const data = await resp.json();
+            if (data.success) {
+                alert(`Grid Action: Pilot is now ${data.blocked ? 'OFFLINE (Suspended)' : 'ONLINE (Active)'}`);
+                fetchPilots();
+            }
         } catch (e) {
             alert('Admin Uplink Error');
         }
