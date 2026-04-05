@@ -21,7 +21,7 @@ const ProtectedRoute = ({ children, allowedRole }: { children: React.ReactNode, 
 function AuthPage() {
   const { user, loginWithGoogle, loginWithEmail, registerWithEmail, verifyOTP, forgotPassword, resetPassword } = useAuth();
   const [authMode, setAuthMode] = useState<'login' | 'signup' | 'otp' | 'forgot'>('login');
-  const [formData, setFormData] = useState({ name: '', email: '', password: '', newPassword: '', confirmPassword: '', otp: '', role: 'user', vehicleType: '', vehicleNumber: '' });
+  const [formData, setFormData] = useState({ name: '', email: '', password: '', newPassword: '', confirmPassword: '', otp: '', role: 'user', vehicleType: '', vehicleNumber: '', phone: '' });
   const [otpContext, setOtpContext] = useState<'signup' | 'forgot'>('signup');
   const [error, setError] = useState('');
   const navigate = useNavigate();
@@ -60,7 +60,7 @@ function AuthPage() {
       if (!success) setError('Invalid credentials');
     } else if (authMode === 'signup') {
       if (formData.password !== formData.confirmPassword) { setError('Passwords do not match'); return; }
-      const success = await registerWithEmail({ name: formData.name, email: formData.email, pass: formData.password, role: formData.role, vehicleType: formData.vehicleType, vehicleNumber: formData.vehicleNumber });
+      const success = await registerWithEmail({ name: formData.name, email: formData.email, pass: formData.password, role: formData.role, vehicleType: formData.vehicleType, vehicleNumber: formData.vehicleNumber, phone: formData.phone });
       if (!success) setError('Failed to register. Email may already be in use.');
     } else if (authMode === 'otp') {
       if (otpContext === 'forgot') {
@@ -111,6 +111,10 @@ function AuthPage() {
                             <div className="space-y-1.5 px-1">
                                 <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Email Address</label>
                                 <input type="email" required placeholder="name@email.com" className="w-full bg-slate-100 border border-slate-300 rounded-2xl p-4 text-sm font-bold text-slate-900 outline-none focus:border-primary-500 transition-all" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} />
+                            </div>
+                            <div className="space-y-1.5 px-1">
+                                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Phone Number</label>
+                                <input type="tel" required placeholder="+91 0000000000" className="w-full bg-slate-100 border border-slate-300 rounded-2xl p-4 text-sm font-bold text-slate-900 outline-none focus:border-primary-500 transition-all" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} />
                             </div>
                             <div className="space-y-1.5 px-1">
                                 <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Password</label>

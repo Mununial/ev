@@ -22,7 +22,7 @@ export default function AdminDashboard() {
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const [isCreatePilotModalOpen, setIsCreatePilotModalOpen] = useState(false);
-    const [newPilot, setNewPilot] = useState({ name: '', email: '', password: '', vehicleType: 'EV', vehicleNumber: '' });
+    const [newPilot, setNewPilot] = useState({ name: '', email: '', password: '', vehicleType: 'EV', vehicleNumber: '', phone: '' });
     const [newEV, setNewEV] = useState({ id: '', plate: '', model: '' });
     const [activeTab, setActiveTab] = useState<'live' | 'assets'>('live');
     const [loading, setLoading] = useState(true);
@@ -134,7 +134,7 @@ export default function AdminDashboard() {
 
     const handleCreatePilot = async (e: React.FormEvent) => {
         e.preventDefault();
-        if(!newPilot.name || !newPilot.email || !newPilot.password || !newPilot.vehicleType || !newPilot.vehicleNumber) {
+        if(!newPilot.name || !newPilot.email || !newPilot.password || !newPilot.vehicleType || !newPilot.vehicleNumber || !newPilot.phone) {
              alert('All fields required for Pilot Provisioning');
              return;
         }
@@ -148,7 +148,7 @@ export default function AdminDashboard() {
             if (data.success) {
                 alert('Success: Pilot Provisioned. Credentials Active.');
                 setIsCreatePilotModalOpen(false);
-                setNewPilot({ name: '', email: '', password: '', vehicleType: 'EV', vehicleNumber: '' });
+                setNewPilot({ name: '', email: '', password: '', vehicleType: 'EV', vehicleNumber: '', phone: '' });
                 fetchPilots();
             } else {
                 alert(data.error || 'Failed to provision pilot');
@@ -610,6 +610,10 @@ export default function AdminDashboard() {
                                         <div className="space-y-2">
                                             <label className="text-[10px] font-black uppercase tracking-widest text-slate-600">Temporary Password</label>
                                             <input required type="text" className="w-full bg-slate-100 border border-slate-300 rounded-2xl p-4 text-sm font-bold shadow-inner outline-none focus:ring-2 ring-indigo-500/50" value={newPilot.password} onChange={e => setNewPilot({...newPilot, password: e.target.value})} placeholder="Secret Key" />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-black uppercase tracking-widest text-slate-600">Mobile Number</label>
+                                            <input required type="tel" className="w-full bg-slate-100 border border-slate-300 rounded-2xl p-4 text-sm font-bold shadow-inner outline-none focus:ring-2 ring-indigo-500/50" value={newPilot.phone} onChange={e => setNewPilot({...newPilot, phone: e.target.value})} placeholder="+91 0000000000" />
                                         </div>
                                         <div className="grid grid-cols-2 gap-4">
                                             <div className="space-y-2">

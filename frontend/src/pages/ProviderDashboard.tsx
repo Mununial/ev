@@ -107,6 +107,13 @@ export default function ProviderDashboard() {
         setNewMessage('');
     };
 
+    const sendQuickReply = (msg: string) => {
+        if (!rideRequest?.id) return;
+        const msgData = { rideId: rideRequest.id, message: msg, sender: 'provider', timestamp: new Date() };
+        setMessages(prev => [...prev, msgData]);
+        socket.emit('send_message', msgData);
+    };
+
     const fetchRoute = async (start: [number, number], end: [number, number]) => {
         try {
             const resp = await fetch(`https://router.project-osrm.org/route/v1/driving/${start[1]},${start[0]};${end[1]},${end[0]}?overview=full&geometries=geojson`);
@@ -318,14 +325,19 @@ export default function ProviderDashboard() {
                                 {messages.length === 0 && <div className="flex-1 flex flex-col items-center justify-center text-center opacity-20"><Headset size={60} className="mb-4" /><p className="text-xs font-black uppercase italic tracking-widest">Secure grid channel established.<br/>Messages are encrypted.</p></div>}
                                 {messages.map((m, i) => (
                                     <div key={i} className={`flex ${m.sender === 'provider' ? 'justify-end' : 'justify-start'}`}>
-                                        <div className={`max-w-[80%] p-4 rounded-2xl text-[13px] font-bold tracking-tight ${m.sender === 'provider' ? 'bg-primary-500 text-white rounded-tr-none' : 'bg-slate-200 text-slate-300 rounded-tl-none'}`}>
+                                        <div className={`max-w-[80%] p-4 rounded-2xl text-[13px] font-bold tracking-tight ${m.sender === 'provider' ? 'bg-primary-500 text-white rounded-tr-none shadow-md' : 'bg-slate-200 text-slate-800 rounded-tl-none shadow-sm'}`}>
                                             {m.message}
                                         </div>
                                     </div>
                                 ))}
                                 <div ref={chatEndRef} />
                             </div>
-                            <form onSubmit={handleSendMessage} className="p-6 bg-slate-50 flex items-center gap-4 border-t border-slate-300">
+                            <div className="px-6 py-3 flex gap-2 overflow-x-auto no-scrollbar border-t border-slate-200 bg-slate-50 shrink-0">
+                                {["On the way", "I have arrived", "Calling you now..."].map((qr, idx) => (
+                                    <button key={idx} onClick={() => sendQuickReply(qr)} className="whitespace-nowrap px-4 py-2 bg-slate-200 rounded-full text-[11px] font-bold text-slate-700 hover:bg-slate-300 active:scale-95 transition-all">{qr}</button>
+                                ))}
+                            </div>
+                            <form onSubmit={handleSendMessage} className="p-6 bg-slate-50 flex items-center gap-4 border-t border-slate-300 shrink-0">
                                 <input value={newMessage} onChange={e => setNewMessage(e.target.value)} className="flex-1 bg-slate-100 border border-slate-300 p-4 rounded-2xl outline-none focus:ring-2 ring-primary-500 text-sm font-bold" placeholder="Transmit data..." />
                                 <button type="submit" className="p-4 bg-primary-500 text-white rounded-2xl shadow-xl"><Send size={20} /></button>
                             </form>

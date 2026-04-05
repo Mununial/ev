@@ -672,7 +672,7 @@ export default function UserDashboard() {
                             <div className="text-center"><span className="px-3 py-1 bg-gray-200 rounded-full text-[10px] font-bold text-gray-500 uppercase">Chat Secured</span></div>
                             {messages.map((m, i) => (
                                 <div key={i} className={`flex ${m.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
-                                    <div className={`max-w-[75%] p-4 rounded-[20px] text-[13px] font-bold ${m.sender === 'user' ? 'bg-[#00C853] text-white rounded-br-sm' : 'bg-white border border-gray-100 rounded-bl-sm shadow-sm'}`}>
+                                    <div className={`max-w-[75%] p-4 rounded-[20px] text-[13px] font-bold ${m.sender === 'user' ? 'bg-[#00C853] text-white rounded-br-sm shadow-md' : 'bg-gray-200 text-gray-900 rounded-bl-sm shadow-sm'}`}>
                                         {m.message}
                                     </div>
                                 </div>

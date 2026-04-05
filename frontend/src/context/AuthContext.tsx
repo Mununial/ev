@@ -14,7 +14,7 @@ interface AuthContextType {
   loading: boolean;
   loginWithGoogle: () => void;
   loginWithEmail: (email: string, pass: string, requestedRole?: string) => Promise<boolean>;
-  registerWithEmail: (userData: { name: string, email: string, pass: string, role: string, vehicleType?: string, vehicleNumber?: string }) => Promise<boolean>;
+  registerWithEmail: (userData: { name: string, email: string, pass: string, role: string, vehicleType?: string, vehicleNumber?: string, phone?: string }) => Promise<boolean>;
   verifyOTP: (email: string, otp: string) => Promise<boolean>;
   forgotPassword: (email: string) => Promise<boolean>;
   resetPassword: (email: string, otp: string, newPassword: string) => Promise<boolean>;
@@ -86,7 +86,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const registerWithEmail = async (userData: { name: string, email: string, pass: string, role: string, vehicleType?: string, vehicleNumber?: string }) => {
+  const registerWithEmail = async (userData: { name: string, email: string, pass: string, role: string, vehicleType?: string, vehicleNumber?: string, phone?: string }) => {
     try {
         setLoading(true);
         // Step 1: Register in Firebase
