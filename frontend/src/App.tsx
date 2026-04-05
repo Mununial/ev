@@ -27,6 +27,23 @@ function AuthPage() {
   const navigate = useNavigate();
 
   useEffect(() => {
+    // URL Parameter detection (for autocompleting reset forms via link)
+    const params = new URLSearchParams(window.location.search);
+    const mode = params.get('mode') as any;
+    const ctx = params.get('ctx') as any;
+    const email = params.get('email');
+    const otp = params.get('otp');
+
+    if (mode && (mode === 'otp' || mode === 'login' || mode === 'signup')) {
+        setAuthMode(mode);
+        if (ctx) setOtpContext(ctx);
+        if (email || otp) {
+            setFormData(p => ({ ...p, email: email || p.email, otp: otp || p.otp }));
+        }
+        // clean up URL
+        window.history.replaceState({}, '', window.location.pathname);
+    }
+
     if (user) {
         if (user.role === 'admin') navigate('/admin');
         else if (user.role === 'provider') navigate('/pilot');
