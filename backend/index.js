@@ -24,13 +24,15 @@ const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 // Email Transporter (Using Gmail via App Password)
 const transporter = nodemailer.createTransport({
   host: 'smtp.gmail.com',
-  port: 587,
-  secure: false, // use STARTTLS
-  requireTLS: true,
+  port: 465,
+  secure: true,
   auth: {
     user: process.env.MAIL_USERNAME,
     pass: process.env.MAIL_PASSWORD?.trim(),
   },
+  tls: {
+    rejectUnauthorized: false
+  }
 });
 
 app.use(cors());
@@ -388,14 +390,34 @@ app.post('/api/auth/forgot-password', async (req, res) => {
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     otpStore[email] = { otp, expires: Date.now() + 600000 };
     
+    // Auto-detect frontend URL from referer
+    const referer = req.get('referer') || '';
+    const origin = req.get('origin') || '';
+    const frontendBase = (referer || origin || 'https://ev-frontend-w9i8.onrender.com').replace(/\/$/, '');
+    const resetUrl = `${frontendBase}/auth?email=${encodeURIComponent(email)}&otp=${otp}&mode=otp&ctx=forgot`;
+
     try {
         await transporter.sendMail({
             from: process.env.MAIL_DEFAULT_SENDER,
             to: email,
-            subject: `SmileSphere Password Reset Code - ${otp}`,
-            text: `Your OTP is ${otp}`
+            subject: `SmileSphere Password Reset - ${otp}`,
+            html: `
+                <div style="font-family: 'Inter', sans-serif; background: #0f172a; color: #f8fafc; padding: 40px; border-radius: 24px; max-width: 500px; margin: auto; border: 1px solid #1e293b;">
+                    <div style="background: #22c55e; width: 40px; height: 40px; border-radius: 12px; margin-bottom: 24px;"></div>
+                    <h1 style="font-size: 24px; font-weight: 800; margin-bottom: 8px;">Reset your password?</h1>
+                    <p style="color: #94a3b8; font-size: 14px; margin-bottom: 32px;">We received a request to reset your SmileSphere EV credentials. Use the code below or the secure link.</p>
+                    
+                    <div style="background: rgba(255,255,255,0.05); padding: 32px; border-radius: 16px; text-align: center; margin-bottom: 32px;">
+                        <span style="font-size: 36px; font-weight: 800; letter-spacing: 8px; color: #fff;">${otp}</span>
+                    </div>
+
+                    <a href="${resetUrl}" style="display: block; background: #22c55e; color: #0f172a; text-align: center; padding: 18px; border-radius: 16px; text-decoration: none; font-weight: 800; font-size: 14px; text-transform: uppercase;">Reset Password Now</a>
+                    
+                    <p style="font-size: 12px; color: #475569; margin-top: 40px; text-align: center;">This link expires in 10 minutes.</p>
+                </div>
+            `
         });
-        res.json({ success: true, message: 'OTP sent' });
+        res.json({ success: true, message: 'Reset instructions sent' });
     } catch (e) {
         console.error('SMTP Forgot Password Error:', e);
         res.status(500).json({ success: false, error: 'Failed to send email' });
