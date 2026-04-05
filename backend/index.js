@@ -24,7 +24,7 @@ const io = new Server(server, {
 
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
-// Initialize Firebase Admin (Assuming serviceAccountKey.json is in the backend root)
+// Initialize Firebase Admin (File fallback to Environment Variable for Render)
 const serviceAccountPath = path.join(__dirname, 'serviceAccountKey.json');
 let firestore;
 
@@ -39,8 +39,23 @@ if (fs.existsSync(serviceAccountPath)) {
   } catch (err) {
     console.error('Failed to parse serviceAccountKey.json:', err);
   }
+} else if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+  try {
+    let serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+    // Fix for Render newline issues
+    if (serviceAccount.private_key) {
+        serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, '\n');
+    }
+    admin.initializeApp({
+      credential: admin.credential.cert(serviceAccount)
+    });
+    firestore = admin.firestore();
+    console.log('Firebase Admin SDK & Firestore Initialized via Environment Variable.');
+  } catch (err) {
+    console.error('Failed to parse FIREBASE_SERVICE_ACCOUNT ENV:', err);
+  }
 } else {
-  console.warn('WARNING: serviceAccountKey.json not found. Firebase Admin features (like Pilot creation) will be disabled.');
+  console.warn('CRITICAL: No Firebase credentials found. Features like Pilot creation will be disabled.');
 }
 
 // Email Transporter (Using Gmail via App Password)
@@ -171,6 +186,7 @@ io.on('connection', (socket) => {
 // Ride Completion & Email Receipt (Now saves to Firestore)
 app.post('/api/rides/complete', async (req, res) => {
   const { rideId, userEmail, pickup, drop, fare, driverName } = req.body;
+  if (!firestore) return res.status(500).json({ success: false, error: 'Firestore not init.' });
   
   try {
     const rideRef = firestore.collection('rides').doc(rideId);
@@ -188,7 +204,7 @@ app.post('/api/rides/complete', async (req, res) => {
       from: process.env.MAIL_DEFAULT_SENDER,
       to: userEmail,
       subject: `Your SmileSphere EV Trip Receipt - ${rideId}`,
-      html: `Trip details for ${rideId} at ₹${fare}.`, // Simplified
+      html: `Trip details for ${rideId} at ₹${fare}.`, 
     };
 
     await transporter.sendMail(mailOptions);
@@ -199,7 +215,7 @@ app.post('/api/rides/complete', async (req, res) => {
   }
 });
 
-// Vehicle asset storage (Simulated DB - Can also move to Firestore if needed)
+// Vehicle asset storage (Simulated DB)
 let registeredVehicles = [
     { id: 'EV-101', plate: 'OD-02-KIIT-01', model: 'Tata Nexon EV', status: 'active', battery: 92 },
     { id: 'EV-102', plate: 'OD-02-KIIT-02', model: 'Ather 450X', status: 'standby', battery: 84 },
@@ -230,12 +246,12 @@ app.delete('/api/vehicles', (req, res) => {
 app.post('/api/admin/create-pilot', async (req, res) => {
     const { name, email, password, vehicleType, vehicleNumber } = req.body;
     
-    if (!firestore) return res.status(500).json({ success: false, error: 'Firestore Admin not initialized.' });
+    if (!firestore) return res.status(500).json({ success: false, error: 'Firestore Admin not initialized. Check Env Variables.' });
 
     try {
         const userRef = firestore.collection('users').where('email', '==', email);
         const snapshot = await userRef.get();
-        if (!snapshot.empty) return res.status(400).json({ success: false, error: 'Email already registered.' });
+        if (!snapshot.empty) return res.status(400).json({ success: false, error: 'User already registered.' });
 
         const fUser = await admin.auth().createUser({ email, password, displayName: name });
         const salt = bcrypt.genSaltSync(10);
@@ -249,8 +265,8 @@ app.post('/api/admin/create-pilot', async (req, res) => {
         await firestore.collection('users').doc(fUser.uid).set(newUser);
         res.json({ success: true, user: { uid: fUser.uid, name, role: 'provider' } });
     } catch (err) {
-        console.error('Admin Pilot Creation Error:', err);
-        res.status(500).json({ success: false, error: 'Internal Grid Error' });
+        console.error('Admin Pilot Creation Final Fail:', err);
+        res.status(500).json({ success: false, error: err.message || 'Internal Grid Error' });
     }
 });
 
