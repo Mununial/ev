@@ -99,9 +99,9 @@ export default function AdminDashboard() {
         };
         fetchSafetyData();
 
-        socket.on('new_sos_alert', (alert) => {
-            setSosAlerts(prev => [alert, ...prev]);
-            alert('🚨 CRITICAL SOS ALERT RECEIVED!');
+        socket.on('new_sos_alert', (sosData) => {
+            setSosAlerts(prev => [sosData, ...prev]);
+            window.alert(`🚨 SOS ALERT: ${sosData.userName} at Campus Node!`);
         });
 
         socket.on('new_complaint', (comp) => {

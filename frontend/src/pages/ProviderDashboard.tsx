@@ -75,6 +75,9 @@ export default function ProviderDashboard() {
                 setRideRequest(data);
                 setStatus('pending');
                 setMessages([]);
+                if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+                const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3');
+                audio.play().catch(() => console.log('Audio Blocked'));
             }
         });
 
@@ -190,12 +193,12 @@ export default function ProviderDashboard() {
                         </div>
                     </div>
                     <div className="flex items-center gap-2">
-                        <div className="hidden lg:flex gap-2">
-                            <button onClick={() => setView('main')} className={`px-4 py-2.5 rounded-2xl font-black text-[9px] uppercase tracking-widest transition-all ${view === 'main' ? 'bg-primary-500 text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}>Mission</button>
-                            <button onClick={() => setView('stats')} className={`px-4 py-2.5 rounded-2xl font-black text-[9px] uppercase tracking-widest transition-all ${view === 'stats' ? 'bg-primary-500 text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}>History</button>
+                        <div className="hidden lg:flex gap-2 mr-2 border-r border-slate-200 pr-2">
+                            <button onClick={() => setView('main')} className={`px-3 py-2 rounded-xl font-black text-[9px] uppercase tracking-widest transition-all ${view === 'main' ? 'bg-primary-500 text-white shadow-lg' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}>Mission</button>
+                            <button onClick={() => setView('stats')} className={`px-3 py-2 rounded-xl font-black text-[9px] uppercase tracking-widest transition-all ${view === 'stats' ? 'bg-primary-500 text-white shadow-lg' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}>History</button>
                         </div>
-                        <button onClick={toggleOnline} className={`px-4 py-2.5 rounded-2xl font-black text-[9px] lg:text-xs uppercase tracking-[0.2em] transition-all flex items-center gap-3 shadow-xl ${isOnline ? 'bg-ev-green text-slate-950 shadow-ev-green/20' : 'bg-slate-800 text-slate-400 grayscale'}`}>
-                            <Power className={`w-3.5 h-3.5 ${isOnline ? 'animate-pulse' : ''}`} /> {isOnline ? 'Uplinked' : 'Standby'}
+                        <button onClick={toggleOnline} className={`px-4 py-2.5 rounded-2xl font-black text-[9px] lg:text-[10px] uppercase tracking-widest transition-all flex items-center gap-2 shadow-xl ${isOnline ? 'bg-ev-green text-slate-950 shadow-ev-green/20' : 'bg-slate-800 text-slate-400 grayscale'}`}>
+                            <Power className={`w-3.5 h-3.5 ${isOnline ? 'animate-pulse' : ''}`} /> {isOnline ? 'Active' : 'Standby'}
                         </button>
                         <button onClick={() => { if(window.confirm('Disconnect Pilot?')) logout(); }} className="p-3 bg-slate-100 border border-slate-300 rounded-2xl text-slate-500 hover:text-rose-500 transition-all">
                             <LogOut size={16} />

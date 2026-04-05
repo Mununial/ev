@@ -256,16 +256,19 @@ export default function UserDashboard() {
                 })
             });
             alert('🚨 COMMAND CENTER ALERTED. Campus Security is on the way.');
+            setIsSOSLoading(false);
             setShowSOS(false);
         } catch (e) {
-            console.error(e);
-        } finally {
+            alert('Uplink Failed. Check network.');
             setIsSOSLoading(false);
         }
     };
 
     const submitComplaint = async () => {
         if (!complaintText.trim()) return;
+        const btn = document.activeElement as HTMLButtonElement;
+        const originalText = btn?.innerText || "Submit Report";
+        if(btn) { btn.innerText = "REPORTING..."; btn.disabled = true; }
         try {
             await fetch(`${import.meta.env.VITE_API_URL}/api/admin/complaints`, {
                 method: 'POST',
@@ -278,10 +281,15 @@ export default function UserDashboard() {
                     driverInfo: driver
                 })
             });
-            alert('Complaint Logged. Admin will review this shortly.');
-            setComplaintText('');
-            setShowComplaint(false);
-        } catch(e) { console.error(e); }
+            if(btn) btn.innerText = "SUCCESS ✓";
+            setTimeout(() => {
+                setComplaintText('');
+                setShowComplaint(false);
+            }, 1500);
+        } catch(e) { 
+            if(btn) { btn.innerText = originalText; btn.disabled = false; }
+            alert('Failed to log report.');
+        }
     };
 
     const handleBooking = () => {
