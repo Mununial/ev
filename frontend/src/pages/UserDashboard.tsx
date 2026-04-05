@@ -728,7 +728,7 @@ export default function UserDashboard() {
                                             cancelRide();
                                             setCancelReasonOpen(false);
                                         }}
-                                        className="w-full text-left px-6 py-5 bg-gray-50 border border-gray-100 rounded-3xl font-bold text-sm hover:bg-red-50 hover:border-red-200 hover:text-red-600 transition-all active:scale-95"
+                                        className="w-full text-left px-7 py-5 bg-slate-50 border border-slate-200 rounded-[2rem] font-black text-[13px] uppercase tracking-tighter text-slate-800 hover:bg-rose-50 hover:border-rose-300 hover:text-rose-600 transition-all active:scale-98 shadow-sm"
                                     >
                                         {rsn}
                                     </button>
@@ -802,7 +802,7 @@ export default function UserDashboard() {
                             <textarea 
                                 value={complaintText}
                                 onChange={e => setComplaintText(e.target.value)}
-                                className="w-full h-32 bg-gray-50 border border-gray-100 rounded-3xl p-5 text-sm font-bold outline-none focus:border-red-200 transition-all mb-6 resize-none"
+                                className="w-full h-40 bg-slate-50 border-2 border-slate-200 rounded-[2rem] p-6 text-[15px] font-black italic tracking-tight text-slate-900 outline-none focus:border-[#00C853] transition-all mb-6 resize-none shadow-inner"
                                 placeholder="Example: Driver asked for extra money..."
                             />
                             <button onClick={submitComplaint} className="w-full py-5 bg-black text-white rounded-[20px] font-black uppercase tracking-widest active:scale-95 transition-transform shadow-xl mb-4">Submit Report</button>
