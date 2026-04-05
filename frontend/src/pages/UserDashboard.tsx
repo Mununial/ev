@@ -248,18 +248,28 @@ export default function UserDashboard() {
                 </div>
                 <AnimatePresence>
                     {isOpen && (
-                        <motion.div 
-                            initial={{ opacity: 0, height: 0 }} 
-                            animate={{ opacity: 1, height: 'auto' }} 
-                            exit={{ opacity: 0, height: 0 }} 
-                            className="relative mt-2 bg-white/50 backdrop-blur-3xl border border-slate-300 rounded-2xl overflow-hidden z-[500] shadow-inner"
-                        >
-                            <div className="max-h-60 overflow-y-auto p-2 custom-scrollbar space-y-1">
+                        <>
+                            {/* Mobile Fixed Overlay / Desktop Absolute List */}
+                            <motion.div 
+                                initial={{ opacity: 0 }} 
+                                animate={{ opacity: 1 }} 
+                                exit={{ opacity: 0 }} 
+                                onClick={() => setIsOpen(false)} 
+                                className="fixed inset-0 z-[1900] bg-slate-900/10 lg:hidden" 
+                            />
+                            <motion.div 
+                                initial={{ opacity: 0, scale: 0.95 }} 
+                                animate={{ opacity: 1, scale: 1 }} 
+                                exit={{ opacity: 0, scale: 0.95 }} 
+                                className="fixed lg:absolute inset-x-4 top-[20%] lg:top-full lg:inset-x-0 mt-2 bg-white border border-slate-300 rounded-[2rem] shadow-[0_40px_100px_rgba(0,0,0,0.5)] z-[2000] max-h-[50vh] lg:max-h-72 overflow-y-auto p-4 custom-scrollbar space-y-2 border-2 border-primary-500/20"
+                            >
+                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2 mb-4">Select Grid Node</p>
                                 {KIIT_LOCATIONS.map(loc => (
-                                    <div key={loc.id} onClick={() => { onChange(loc.id); setIsOpen(false); }} className={`p-4 rounded-xl text-[11px] font-black uppercase tracking-widest cursor-pointer transition-all active:scale-[0.98] ${value === loc.id ? 'bg-primary-500 text-white shadow-lg' : 'hover:bg-slate-100 text-slate-500'}`}>{loc.name}</div>
+                                    <div key={loc.id} onClick={() => { onChange(loc.id); setIsOpen(false); }} className={`p-4 rounded-2xl text-[12px] font-black uppercase tracking-widest cursor-pointer transition-all active:scale-[0.98] ${value === loc.id ? 'bg-primary-500 text-white shadow-xl translate-x-1' : 'hover:bg-slate-100 text-slate-500'}`}>{loc.name}</div>
                                 ))}
-                            </div>
-                        </motion.div>
+                                <div className="h-4 lg:hidden" />
+                            </motion.div>
+                        </>
                     )}
                 </AnimatePresence>
             </div>
@@ -268,7 +278,7 @@ export default function UserDashboard() {
 
     return (
         <div className="h-[100dvh] w-full lg:flex lg:flex-row bg-slate-50 overflow-hidden font-sans text-slate-900 relative">
-            <div className="absolute lg:relative top-0 left-0 w-full max-h-[55vh] lg:max-h-none lg:h-full lg:w-[420px] bg-white border-b lg:border-r lg:border-b-0 border-slate-300 p-4 pb-6 lg:p-10 flex flex-col gap-4 lg:gap-8 z-[100] shrink-0 shadow-[0_20px_50px_rgba(0,0,0,0.2)] rounded-b-[2rem] lg:rounded-none overflow-visible">
+            <div className="absolute lg:relative top-0 left-0 w-full max-h-[85vh] lg:max-h-none lg:h-full lg:w-[420px] bg-white border-b lg:border-r lg:border-b-0 border-slate-300 p-4 pb-6 lg:p-10 flex flex-col gap-4 lg:gap-8 z-[100] shrink-0 shadow-[0_20px_50px_rgba(0,0,0,0.2)] rounded-b-[3rem] lg:rounded-none overflow-visible">
                 <header className="flex justify-between items-center mb-10">
                     <div className="flex items-center gap-4">
                         {(view !== 'main' && status === 'idle') && <button onClick={() => setView('main')} className="p-3 bg-slate-100 rounded-2xl border border-slate-300"><Navigation className="rotate-[-90deg] w-4 h-4 text-slate-500" /></button>}
