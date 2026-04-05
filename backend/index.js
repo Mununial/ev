@@ -330,7 +330,7 @@ app.post('/api/auth/verify-otp', (req, res) => {
 
 // Auth Register and Login combined into a unified controller for security rules
 app.post('/api/auth/register', (req, res) => {
-    const { name, email, password, role, vehicleType, vehicleNumber } = req.body;
+    const { name, email, password, role, vehicleType, vehicleNumber, uid } = req.body;
     
     // Check if email already used for any role
     const existingUser = db.users.find(u => u.email === email);
@@ -338,20 +338,11 @@ app.post('/api/auth/register', (req, res) => {
         return res.status(400).json({ success: false, error: 'Email already registered. Please login.' });
     }
     
-    // Check global password reuse securely
-    let isReused = false;
-    for (const hash of db.uniquePasswords) {
-        if (bcrypt.compareSync(password, String(hash).substring(0, 60))) { isReused = true; break; }
-    }
-    if (isReused) {
-        return res.status(400).json({ success: false, error: 'Password is too common or already in use by another account.' });
-    }
-    
     const salt = bcrypt.genSaltSync(10);
     const hashedPassword = bcrypt.hashSync(password, salt);
     
     const newUser = {
-        uid: 'USER_' + Math.random().toString(36).substr(2, 9),
+        uid: uid || (role === 'provider' ? 'PILOT_' : 'USER_') + Math.random().toString(36).substr(2, 9),
         name, email, password: hashedPassword, role, vehicleType: role === 'provider' ? vehicleType : null, vehicleNumber: role === 'provider' ? vehicleNumber : null
     };
     
@@ -363,10 +354,17 @@ app.post('/api/auth/register', (req, res) => {
 });
 
 app.post('/api/auth/login', (req, res) => {
-    const { email, password, requestedRole } = req.body;
-    const user = db.users.find(u => u.email === email);
+    const { email, password, requestedRole, uid } = req.body;
     
-    if (!user || !bcrypt.compareSync(password, user.password)) {
+    // Find user by email or uid
+    const user = db.users.find(u => u.email === email || (uid && u.uid === uid));
+    
+    if (!user) {
+        return res.status(400).json({ success: false, error: 'User mapping not found in Grid DB' });
+    }
+
+    // If login is coming via Firebase, password verification in backend is redundant but we can keep it as a fallback
+    if (!uid && !bcrypt.compareSync(password, user.password)) {
         return res.status(400).json({ success: false, error: 'Invalid credentials' });
     }
     

@@ -1,4 +1,13 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { auth } from '../firebase';
+import { 
+  createUserWithEmailAndPassword, 
+  signInWithEmailAndPassword, 
+  sendPasswordResetEmail, 
+  signOut,
+  GoogleAuthProvider,
+  signInWithPopup
+} from 'firebase/auth';
 
 interface AuthContextType {
   user: any | null;
@@ -30,28 +39,38 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [user]);
 
-  const loginWithGoogle = () => {
+  const loginWithGoogle = async () => {
     setLoading(true);
-    setTimeout(() => {
+    try {
+        const provider = new GoogleAuthProvider();
+        const result = await signInWithPopup(auth, provider);
         const u = {
-            uid: 'DEMO_USER_123',
-            displayName: 'SMILESPHERE Pilot',
-            email: 'admin@SMILESPHERE.ev',
-            role: 'admin',
-            photoURL: 'https://img.icons8.com/color/96/avatar.png'
+            uid: result.user.uid,
+            displayName: result.user.displayName,
+            email: result.user.email,
+            role: 'user', // Default to user for google sign-in
+            photoURL: result.user.photoURL
         };
+        // Option: Sync with backend if needed
         setUser(u);
         setLoading(false);
-    }, 500);
+    } catch (e) {
+        console.error(e);
+        setLoading(false);
+    }
   };
 
   const loginWithEmail = async (email: string, pass: string, requestedRole?: string) => {
     setLoading(true);
     try {
+        // Step 1: Login via Firebase
+        const cred = await signInWithEmailAndPassword(auth, email, pass);
+        
+        // Step 2: Fetch metadata from our backend
         const resp = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/login`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email, password: pass, requestedRole })
+            body: JSON.stringify({ email, password: pass, requestedRole, uid: cred.user.uid })
         });
         const data = await resp.json();
         setLoading(false);
@@ -60,8 +79,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             return true;
         }
         return false;
-    } catch {
+    } catch (e: any) {
         setLoading(false);
+        alert(e.message);
         return false;
     }
   };
@@ -69,10 +89,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const registerWithEmail = async (userData: { name: string, email: string, pass: string, role: string, vehicleType?: string, vehicleNumber?: string }) => {
     try {
         setLoading(true);
+        // Step 1: Register in Firebase
+        const cred = await createUserWithEmailAndPassword(auth, userData.email, userData.pass);
+
+        // Step 2: Save metadata in backend
         const resp = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/register`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ ...userData, password: userData.pass })
+            body: JSON.stringify({ ...userData, password: userData.pass, uid: cred.user.uid })
         });
         const data = await resp.json();
         setLoading(false);
@@ -81,9 +105,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             return true;
         }
         return false;
-    } catch (e) {
+    } catch (e: any) {
         setLoading(false);
-        console.error(e);
+        alert(e.message);
         return false;
     }
   };
@@ -105,13 +129,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const forgotPassword = async (email: string) => {
       try {
-          const resp = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/forgot-password`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ email })
-          });
-          return (await resp.json()).success;
-      } catch { return false; }
+          setLoading(true);
+          await sendPasswordResetEmail(auth, email);
+          setLoading(false);
+          alert('Password reset link sent to your email! No OTP required.');
+          return true;
+      } catch (e: any) { 
+          setLoading(false);
+          alert(e.message);
+          return false; 
+      }
   };
 
   const resetPassword = async (email: string, otp: string, newPassword: string) => {
@@ -146,7 +173,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
   };
 
-  const logout = () => {
+  const logout = async () => {
+    await signOut(auth);
     setUser(null);
     localStorage.removeItem('SMILESPHERE_auth');
   };
