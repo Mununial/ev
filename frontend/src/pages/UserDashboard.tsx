@@ -5,7 +5,7 @@ import {
     MapPin, Navigation, Car, Bike, Phone, MessageSquare, Menu, Activity, 
     LogOut, CheckCircle2, Star, Sparkles, Calendar, X, Send, AlertTriangle, 
     Battery, User as UserIcon, IndianRupee, Mic, Headset, AlertCircle, Zap,
-    ChevronUp, Clock, RotateCcw
+    ChevronUp, Clock, RotateCcw, Search, ShieldCheck, Map as MapIcon
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { KIIT_LOCATIONS, CAMPUS_CENTER } from '../data/kiitData';
