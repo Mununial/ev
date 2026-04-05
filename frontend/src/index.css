@@ -1,0 +1,68 @@
+@import "tailwindcss";
+
+@config "../tailwind.config.js";
+
+/* Tailwind 4 v-track scan */
+@source "../index.html";
+@source "./**/*.{js,ts,jsx,tsx}";
+
+@layer base {
+  body {
+    @apply bg-slate-50 text-slate-900 font-sans;
+  }
+  :root {
+    --ev-blue: #3b82f6;
+    --ev-green: #22c55e;
+    --ev-purple: #8b5cf6;
+    --ev-gold: #f59e0b;
+  }
+}
+
+@keyframes dash {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.animated-polyline {
+  animation: dash 20s linear infinite;
+}
+
+.glass {
+  @apply backdrop-blur-md bg-slate-200 border border-white/20 rounded-2xl;
+}
+
+.glass-card {
+  @apply backdrop-blur-lg bg-white/40 border border-slate-700/50 rounded-3xl shadow-2xl;
+}
+
+.btn-primary {
+  @apply px-6 py-3 bg-gradient-to-r from-primary-500 to-primary-700 hover:from-primary-600 hover:to-primary-800 text-slate-900 font-bold rounded-xl transition-all shadow-lg shadow-primary-500/20 active:scale-95;
+}
+
+.btn-secondary {
+  @apply px-6 py-3 bg-slate-800 hover:bg-slate-700 text-slate-900 font-bold rounded-xl transition-all border border-slate-700;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.leaflet-container {
+  width: 100%;
+  height: 100vh;
+  border-radius: 2rem;
+  overflow: hidden;
+  filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%);
+}

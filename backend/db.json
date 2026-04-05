@@ -1,0 +1,28 @@
+{
+  "users": [
+    {
+      "uid": "PILOT_n5wnn9ypp",
+      "name": "munu",
+      "email": "mununial637@gmail.com",
+      "password": "$2b$10$oXulLR3HGo8Le28R2ZPrbeoRnZ05YTB.ZpM.NX6IIfsQCq/3qpAC2",
+      "role": "provider",
+      "vehicleType": "EV",
+      "vehicleNumber": "EV-25-20",
+      "blocked": false
+    },
+    {
+      "uid": "PILOT_x4fw27gly",
+      "name": "texa",
+      "email": "texab85974@cosdas.com",
+      "password": "$2b$10$0hr9AqWi4o.uPnmcf7kc0uF2zM0F1iYeBk.0wmk6o89Ahav0thNT2",
+      "role": "provider",
+      "vehicleType": "EV",
+      "vehicleNumber": "EV58"
+    }
+  ],
+  "uniquePasswords": [
+    "$2b$10$oXulLR3HGo8Le28R2ZPrbeoRnZ05YTB.ZpM.NX6IIfsQCq/3qpAC2",
+    "$2b$10$0hr9AqWi4o.uPnmcf7kc0uF2zM0F1iYeBk.0wmk6o89Ahav0thNT2"
+  ],
+  "rides": []
+}
