@@ -57,6 +57,37 @@ export default function UserDashboard() {
     const [rating, setRating] = useState(0);
 
     const chatEndRef = useRef<HTMLDivElement>(null);
+    const dragControls = useDragControls();
+
+    // Restoring Active Ride
+    useEffect(() => {
+        const savedRide = localStorage.getItem('active_ride');
+        if (savedRide) {
+            try {
+                const parsed = JSON.parse(savedRide);
+                setStatus(parsed.status);
+                setPickup(parsed.pickup);
+                setDrop(parsed.drop);
+                setRideId(parsed.id);
+                if (parsed.driver) setDriver(parsed.driver);
+                if (parsed.otp) setOtp(parsed.otp);
+                if (parsed.fare) setFare(parsed.fare);
+                if (parsed.vehicleType) setVehicleType(parsed.vehicleType);
+                if (parsed.status !== 'idle') setSheetState('mid');
+            } catch(e) {}
+        }
+    }, []);
+
+    // Save Active Ride state on change
+    useEffect(() => {
+        if (status === 'idle' || status === 'completed' || status === 'cancelled') {
+            localStorage.removeItem('active_ride');
+        } else {
+            localStorage.setItem('active_ride', JSON.stringify({
+                status, pickup, drop, id: rideId, driver, otp, fare, vehicleType
+            }));
+        }
+    }, [status, pickup, drop, rideId, driver, otp, fare, vehicleType]);
 
     useEffect(() => {
         chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -199,6 +230,13 @@ export default function UserDashboard() {
         setNewMessage('');
     };
 
+    const sendQuickReply = (msg: string) => {
+        if (!rideId) return;
+        const msgData = { rideId, message: msg, sender: 'user', timestamp: new Date() };
+        setMessages(prev => [...prev, msgData]);
+        socket.emit('send_message', msgData);
+    };
+
     const handleBooking = () => {
         if (!pickup || !drop) return;
         const newOtp = Math.floor(1000 + Math.random() * 9000).toString();
@@ -311,6 +349,8 @@ export default function UserDashboard() {
                 }}
                 transition={{ type: 'spring', damping: 25, stiffness: 200 }}
                 drag={isInputFocused ? false : "y"}
+                dragControls={dragControls}
+                dragListener={false}
                 dragConstraints={{ top: 0, bottom: 0 }}
                 dragElastic={0.2}
                 onDragEnd={(e, info) => {
@@ -326,6 +366,8 @@ export default function UserDashboard() {
                 {/* Drag Handle Area */}
                 <div 
                   className="w-full flex justify-center py-4 cursor-grab active:cursor-grabbing shrink-0" 
+                  onPointerDown={(e) => dragControls.start(e)}
+                  style={{ touchAction: "none" }}
                   onClick={() => setSheetState(prev => prev === 'mid' ? 'full' : 'mid')}
                 >
                     <div className="w-12 h-1.5 bg-gray-300 rounded-full" />
@@ -636,7 +678,12 @@ export default function UserDashboard() {
                             ))}
                             <div ref={chatEndRef} />
                         </div>
-                        <form onSubmit={handleSendMessage} className="p-4 bg-white border-t border-gray-100 flex gap-3 pb-8">
+                        <div className="px-4 py-2 flex gap-2 overflow-x-auto no-scrollbar border-t border-gray-100 bg-white shadow-sm shrink-0">
+                            {["I'm waiting at pickup", "Where are you?", "Okay", "On my way"].map((qr, idx) => (
+                                <button key={idx} onClick={() => sendQuickReply(qr)} className="whitespace-nowrap px-4 py-2 bg-gray-100 rounded-full text-[11px] font-bold text-gray-600 hover:bg-gray-200 active:scale-95">{qr}</button>
+                            ))}
+                        </div>
+                        <form onSubmit={handleSendMessage} className="p-4 bg-white flex gap-3 pb-8 shrink-0">
                             <input value={newMessage} onChange={e => setNewMessage(e.target.value)} className="flex-1 bg-gray-100 px-6 py-4 rounded-full outline-none font-bold text-sm placeholder:text-gray-400" placeholder="Type a message..." />
                             <button className="w-14 h-14 bg-[#00C853] text-white rounded-full flex items-center justify-center shrink-0 active:scale-90 transition-transform"><Send size={20} /></button>
                         </form>
