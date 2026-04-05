@@ -48,7 +48,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const loginWithEmail = async (email: string, pass: string, requestedRole?: string) => {
     setLoading(true);
     try {
-        const resp = await fetch('http://localhost:5000/api/auth/login', {
+        const resp = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/login`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email, password: pass, requestedRole })
@@ -68,7 +68,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const registerWithEmail = async (name: string, email: string, pass: string) => {
     try {
-        const resp = await fetch('http://localhost:5000/api/auth/send-otp', {
+        const resp = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/send-otp`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email, name })
@@ -83,14 +83,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const verifyOTP = async (email: string, otp: string, userData: { name: string, role: string, password?: string, vehicleType?: string, vehicleNumber?: string }) => {
     try {
-        const resp = await fetch('http://localhost:5000/api/auth/verify-otp', {
+        const resp = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/verify-otp`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email, otp })
         });
         const data = await resp.json();
         if (data.success) {
-            const regResp = await fetch('http://localhost:5000/api/auth/register', {
+            const regResp = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/register`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ ...userData, email })
@@ -110,7 +110,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const forgotPassword = async (email: string) => {
       try {
-          const resp = await fetch('http://localhost:5000/api/auth/forgot-password', {
+          const resp = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/forgot-password`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ email })
@@ -121,7 +121,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const resetPassword = async (email: string, otp: string, newPassword: string) => {
       try {
-          const resp = await fetch('http://localhost:5000/api/auth/reset-password', {
+          const resp = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/reset-password`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ email, otp, newPassword })
@@ -139,7 +139,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           return;
       }
       try {
-          await fetch('http://localhost:5000/api/auth/delete', {
+          await fetch(`${import.meta.env.VITE_API_URL}/api/auth/delete`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ email })
@@ -170,3 +170,5 @@ export const useAuth = () => {
   }
   return context;
 };
+
+

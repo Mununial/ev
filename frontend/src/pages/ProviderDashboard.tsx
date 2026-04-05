@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { CAMPUS_CENTER } from '../data/kiitData';
 import { useAuth } from '../context/AuthContext';
 
-const socket = io('http://localhost:5000');
+const socket = io(import.meta.env.VITE_API_URL);
 
 export default function ProviderDashboard() {
     const { user, logout } = useAuth();
@@ -336,3 +336,4 @@ export default function ProviderDashboard() {
         </div>
     );
 }
+

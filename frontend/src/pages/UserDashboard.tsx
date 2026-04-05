@@ -7,7 +7,7 @@ import { KIIT_LOCATIONS, CAMPUS_CENTER } from '../data/kiitData';
 import { useAuth } from '../context/AuthContext';
 import { RideOrchestrator, RidePlan, ClassSchedule } from '../utils/rideSystem';
 
-const socket = io('http://localhost:5000');
+const socket = io(import.meta.env.VITE_API_URL);
 
 // Mock Schedule for demonstration
 const MOCK_SCHEDULE: ClassSchedule[] = [
@@ -480,4 +480,5 @@ export default function UserDashboard() {
         </div>
     );
 }
+
 

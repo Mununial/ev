@@ -7,7 +7,7 @@ import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'rec
 import { CAMPUS_CENTER, KIIT_LOCATIONS } from '../data/kiitData';
 import { useAuth } from '../context/AuthContext';
 
-const socket = io('http://localhost:5000');
+const socket = io(import.meta.env.VITE_API_URL);
 
 type DashboardView = 'ops' | 'assets' | 'providers' | 'grid' | 'revenue' | 'config';
 
@@ -30,7 +30,7 @@ export default function AdminDashboard() {
 
     const fetchVehicles = async () => {
         try {
-            const resp = await fetch('http://localhost:5000/api/vehicles');
+            const resp = await fetch(`${import.meta.env.VITE_API_URL}/api/vehicles`);
             const data = await resp.json();
             setVehicles(data);
         } catch (e) {
@@ -42,7 +42,7 @@ export default function AdminDashboard() {
 
     const fetchPilots = async () => {
         try {
-            const resp = await fetch('http://localhost:5000/api/admin/pilots');
+            const resp = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/pilots`);
             setDbPilots(await resp.json());
         } catch (e) {}
     };
@@ -50,7 +50,7 @@ export default function AdminDashboard() {
     const handleBlockPilot = async (uid: string) => {
         if (!window.confirm('Toggle block status for this Provider profile?')) return;
         try {
-            await fetch('http://localhost:5000/api/admin/toggle-block-pilot', {
+            await fetch(`${import.meta.env.VITE_API_URL}/api/admin/toggle-block-pilot`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ uid })
@@ -96,7 +96,7 @@ export default function AdminDashboard() {
     const handleAddEV = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
-            const resp = await fetch('http://localhost:5000/api/vehicles', {
+            const resp = await fetch(`${import.meta.env.VITE_API_URL}/api/vehicles`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(newEV)
@@ -116,7 +116,7 @@ export default function AdminDashboard() {
     const handleDeleteVehicle = async (plate: string) => {
         if (!window.confirm(`Permanently purge asset [${plate}] from Grid Inventory?`)) return;
         try {
-            const resp = await fetch('http://localhost:5000/api/vehicles', {
+            const resp = await fetch(`${import.meta.env.VITE_API_URL}/api/vehicles`, {
                 method: 'DELETE',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ plate })
@@ -139,7 +139,7 @@ export default function AdminDashboard() {
              return;
         }
         try {
-            const resp = await fetch('http://localhost:5000/api/admin/create-pilot', {
+            const resp = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/create-pilot`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(newPilot)
@@ -792,3 +792,4 @@ function CheckItem({ label }: { label: string }) {
         </div>
     );
 }
+
