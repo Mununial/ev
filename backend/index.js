@@ -194,12 +194,15 @@ io.on('connection', (socket) => {
   });
 
   socket.on('disconnect', () => {
-    const pId = Object.keys(onlineProviders).find(id => onlineProviders[id].socketId === socket.id);
-    if (pId) {
-      delete onlineProviders[pId];
+    // Find provider with this socketId
+    const providerId = Object.keys(onlineProviders).find(id => onlineProviders[id].socketId === socket.id);
+    if (providerId) {
+      delete onlineProviders[providerId];
       io.emit('fleet_update', onlineProviders);
+      console.log(`Provider ${providerId} disconnected`);
+    } else {
+      console.log('User/Admin client disconnected');
     }
-    console.log('Client disconnected');
   });
 });
 

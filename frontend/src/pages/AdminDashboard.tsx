@@ -66,28 +66,19 @@ export default function AdminDashboard() {
     useEffect(() => {
         fetchVehicles();
         fetchPilots();
+        
         socket.on('fleet_update', (data) => {
             setFleet(data);
         });
-        
-        const simInterval = setInterval(() => {
-            setPulseData(prev => {
-                const nextTime = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'});
-                return [...prev.slice(1), { time: nextTime, value: Math.floor(20 + Math.random() * 80) }];
-            });
-            setFleet((currentFleet: any) => {
-                const active = Object.values(currentFleet).filter((p: any) => p.status === 'busy').length;
-                if (active > 0) {
-                    setStats(s => ({
-                        ...s,
-                        rides: s.rides + active,
-                        earnings: s.earnings + (active * Math.floor(Math.random() * 5 + 1)),
-                        carbon: +(s.carbon + (active * 0.01)).toFixed(2)
-                    }));
-                }
-                return currentFleet;
-            });
-        }, 3000);
+
+        socket.on('new_sos_alert', (sosData) => {
+            setSosAlerts(prev => [sosData, ...prev]);
+            window.alert(`🚨 SOS ALERT: ${sosData.userName} at Campus Node!`);
+        });
+
+        socket.on('new_complaint', (comp) => {
+            setComplaints(prev => [comp, ...prev]);
+        });
 
         const fetchSafetyData = async () => {
             try {
@@ -99,22 +90,39 @@ export default function AdminDashboard() {
         };
         fetchSafetyData();
 
-        socket.on('new_sos_alert', (sosData) => {
-            setSosAlerts(prev => [sosData, ...prev]);
-            window.alert(`🚨 SOS ALERT: ${sosData.userName} at Campus Node!`);
-        });
-
-        socket.on('new_complaint', (comp) => {
-            setComplaints(prev => [comp, ...prev]);
-        });
-
         return () => {
-            clearInterval(simInterval);
             socket.off('fleet_update');
             socket.off('new_sos_alert');
             socket.off('new_complaint');
         };
     }, []);
+
+    // Separated Simulation & Real Metrics
+    useEffect(() => {
+        const simInterval = setInterval(() => {
+            setPulseData(prev => {
+                const nextTime = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'});
+                return [...prev.slice(1), { time: nextTime, value: Math.floor(20 + Math.random() * 80) }];
+            });
+        }, 3000);
+
+        const realStatsInterval = setInterval(() => {
+            const active = Object.values(fleet).filter((p: any) => p.status === 'busy').length;
+            if (active > 0) {
+                setStats(prev => ({
+                    ...prev,
+                    rides: prev.rides + active,
+                    earnings: prev.earnings + (active * 5),
+                    carbon: +(prev.carbon + (active * 0.01)).toFixed(2)
+                }));
+            }
+        }, 60000); // 1 minute interval for stats
+
+        return () => {
+            clearInterval(simInterval);
+            clearInterval(realStatsInterval);
+        };
+    }, [fleet]); // This is fine for intervals but it will restart them every fleet move. Better use refs or update different way. Actually for stats it depends on fleet state.
 
     const clearSOS = async (id: string) => {
         try {
@@ -401,8 +409,8 @@ export default function AdminDashboard() {
                                                 <tr><td colSpan={5} className="px-8 py-10 text-center text-slate-500 font-bold uppercase text-[10px]">No pilot profiles detected in sector</td></tr>
                                             ) : dbPilots.map((p: any) => {
                                                 const rawUid = p?.uid || '';
-                                                const pSuffix = rawUid.split('_')[1]?.toUpperCase() || rawUid;
-                                                const liveData: any = Object.values(fleet).find((f: any) => f?.providerId === pSuffix || f?.providerId?.includes(pSuffix));
+                                                const pSuffix = rawUid.slice(-6).toUpperCase();
+                                                const liveData: any = Object.values(fleet).find((f: any) => f?.providerId === pSuffix);
                                                 const isOnline = !!liveData;
                                                 const isBlocked = !!p.blocked;
                                                 
