@@ -241,7 +241,7 @@ export default function App() {
                 <Route path="/terminal" element={<ProtectedRoute><TerminalPage /></ProtectedRoute>} />
                 <Route path="/user" element={<ProtectedRoute allowedRole="user"><UserDashboard /></ProtectedRoute>} />
                 <Route path="/pilot" element={<ProtectedRoute allowedRole="provider"><ProviderDashboard /></ProtectedRoute>} />
-                <Route path="/admin" element={<ProtectedRoute allowedRole="admin"><AdminDashboard /></ProtectedRoute>} />
+                <Route path="/admin" element={<AdminDashboard />} />
                 <Route path="/" element={<Navigate to="/auth" replace />} />
             </Routes>
         </AuthProvider>
