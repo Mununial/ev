@@ -5,8 +5,8 @@ interface AuthContextType {
   loading: boolean;
   loginWithGoogle: () => void;
   loginWithEmail: (email: string, pass: string, requestedRole?: string) => Promise<boolean>;
-  registerWithEmail: (name: string, email: string, pass: string) => Promise<boolean>;
-  verifyOTP: (email: string, otp: string, userData: { name: string, role: string, password?: string, vehicleType?: string }) => Promise<boolean>;
+  registerWithEmail: (userData: { name: string, email: string, pass: string, role: string, vehicleType?: string, vehicleNumber?: string }) => Promise<boolean>;
+  verifyOTP: (email: string, otp: string) => Promise<boolean>;
   forgotPassword: (email: string) => Promise<boolean>;
   resetPassword: (email: string, otp: string, newPassword: string) => Promise<boolean>;
   deleteAccount: (email: string) => Promise<void>;
@@ -66,22 +66,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const registerWithEmail = async (name: string, email: string, pass: string) => {
+  const registerWithEmail = async (userData: { name: string, email: string, pass: string, role: string, vehicleType?: string, vehicleNumber?: string }) => {
     try {
-        const resp = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/send-otp`, {
+        setLoading(true);
+        const resp = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/register`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email, name })
+            body: JSON.stringify({ ...userData, password: userData.pass })
         });
         const data = await resp.json();
-        return data.success;
+        setLoading(false);
+        if (data.success) {
+            setUser(data.user);
+            return true;
+        }
+        return false;
     } catch (e) {
+        setLoading(false);
         console.error(e);
         return false;
     }
   };
 
-  const verifyOTP = async (email: string, otp: string, userData: { name: string, role: string, password?: string, vehicleType?: string, vehicleNumber?: string }) => {
+  const verifyOTP = async (email: string, otp: string) => {
     try {
         const resp = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/verify-otp`, {
             method: 'POST',
@@ -89,19 +96,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             body: JSON.stringify({ email, otp })
         });
         const data = await resp.json();
-        if (data.success) {
-            const regResp = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/register`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ ...userData, email })
-            });
-            const regData = await regResp.json();
-            if (regData.success) {
-                setUser(regData.user);
-                return true;
-            }
-        }
-        return false;
+        return data.success;
     } catch (e) {
         console.error(e);
         return false;

@@ -43,16 +43,15 @@ function AuthPage() {
       if (!success) setError('Invalid credentials');
     } else if (authMode === 'signup') {
       if (formData.password !== formData.confirmPassword) { setError('Passwords do not match'); return; }
-      const success = await registerWithEmail(formData.name, formData.email, formData.password);
-      if (success) { setAuthMode('otp'); setOtpContext('signup'); }
-      else setError('Failed to send OTP or validation error (Common password or existing email).');
+      const success = await registerWithEmail({ name: formData.name, email: formData.email, pass: formData.password, role: formData.role, vehicleType: formData.vehicleType, vehicleNumber: formData.vehicleNumber });
+      if (!success) setError('Failed to register. Email may already be in use.');
     } else if (authMode === 'otp') {
       if (otpContext === 'forgot') {
          const success = await resetPassword(formData.email, formData.otp, formData.newPassword);
          if (success) { setAuthMode('login'); alert('Password reset successful'); }
          else setError('Failed to reset. Invalid OTP or common/old password.');
       } else {
-         const success = await verifyOTP(formData.email, formData.otp, { name: formData.name, role: formData.role, password: formData.password, vehicleType: formData.vehicleType, vehicleNumber: formData.vehicleNumber });
+         const success = await verifyOTP(formData.email, formData.otp);
          if (!success) setError('Invalid OTP or validation error.');
       }
     } else if (authMode === 'forgot') {
