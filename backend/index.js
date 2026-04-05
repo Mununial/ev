@@ -19,10 +19,12 @@ const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 // Email Transporter (Using Gmail via App Password)
 const transporter = nodemailer.createTransport({
-  service: 'gmail',
+  host: 'smtp.gmail.com',
+  port: 465,
+  secure: true,
   auth: {
     user: process.env.MAIL_USERNAME,
-    pass: process.env.MAIL_PASSWORD,
+    pass: process.env.MAIL_PASSWORD?.trim(),
   },
 });
 
@@ -262,6 +264,7 @@ app.post('/api/auth/send-otp', async (req, res) => {
         });
         res.json({ success: true, message: 'OTP sent' });
     } catch (e) {
+        console.error('SMTP OTP Error:', e);
         res.status(500).json({ error: 'Failed to send OTP' });
     }
 });
@@ -389,6 +392,7 @@ app.post('/api/auth/forgot-password', async (req, res) => {
         });
         res.json({ success: true, message: 'OTP sent' });
     } catch (e) {
+        console.error('SMTP Forgot Password Error:', e);
         res.status(500).json({ success: false, error: 'Failed to send email' });
     }
 });
