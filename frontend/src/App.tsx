@@ -79,7 +79,7 @@ function AuthPage() {
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="z-10 w-full max-w-md glass-card p-8 lg:p-10 border border-slate-300 shadow-2xl relative overflow-hidden">
             <div className="flex gap-6 mb-10">
                 <button onClick={() => { setAuthMode('login'); setError(''); }} className={`flex-1 py-3 text-[10px] font-black uppercase tracking-[0.2em] border-b-2 transition-all ${authMode === 'login' ? 'border-primary-500 text-slate-900' : 'border-transparent text-slate-500'}`}>Login</button>
-                <button onClick={() => { setAuthMode('signup'); setError(''); }} className={`flex-1 py-3 text-[10px] font-black uppercase tracking-[0.2em] border-b-2 transition-all ${authMode !== 'login' ? 'border-primary-500 text-slate-900' : 'border-transparent text-slate-500'}`}>Grid Registration</button>
+                <button onClick={() => { setAuthMode('signup'); setError(''); }} className={`flex-1 py-3 text-[10px] font-black uppercase tracking-[0.2em] border-b-2 transition-all ${authMode === 'signup' ? 'border-primary-500 text-slate-900' : 'border-transparent text-slate-500'}`}>Grid Registration</button>
             </div>
 
             <form onSubmit={handleAuth} className="space-y-6">
