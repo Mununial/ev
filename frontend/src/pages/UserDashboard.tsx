@@ -544,8 +544,14 @@ export default function UserDashboard() {
                                     <Search className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[#00C853]" size={32} />
                                 </div>
                                 <h2 className="text-2xl font-black tracking-tighter text-[#212121]">Finding your ride...</h2>
-                                <p className="text-xs font-bold text-gray-500 mt-2">Contacting nearby pilots in grid</p>
-                                <button onClick={cancelRide} className="mt-16 py-4 px-8 bg-red-50 text-red-500 rounded-full font-black text-[10px] uppercase tracking-widest active:scale-95 transition-all">Cancel Request</button>
+                                <p className="text-xs font-bold text-gray-500 mt-2 mb-8 uppercase tracking-widest">Contacting nearby pilots in grid</p>
+                                
+                                <div className="bg-[#E8F5E9] p-5 rounded-2xl border border-[#00C853]/20 flex flex-col items-center">
+                                    <p className="text-[9px] font-black text-[#00C853] uppercase tracking-widest mb-1">Your Booking ID & OTP</p>
+                                    <p className="text-xl font-black tracking-tight text-[#212121]">{otp}</p>
+                                </div>
+
+                                <button onClick={cancelRide} className="mt-10 py-4 px-8 bg-red-50 text-red-500 rounded-full font-black text-[10px] uppercase tracking-widest active:scale-95 transition-all">Cancel Request</button>
                             </motion.div>
                         )}
 

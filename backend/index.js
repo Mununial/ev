@@ -17,9 +17,16 @@ dns.setDefaultResultOrder('ipv4first');
 dotenv.config();
 
 const app = express();
+app.use(express.json());
+app.use(cors({ origin: ["https://ev-frontend-w9i8.onrender.com", "http://localhost:5173"], credentials: true }));
+
 const server = http.createServer(app);
 const io = new Server(server, {
-  cors: { origin: "*", methods: ["GET", "POST"] }
+  cors: { 
+    origin: ["https://ev-frontend-w9i8.onrender.com", "http://localhost:5173"], 
+    methods: ["GET", "POST"],
+    credentials: true
+  }
 });
 
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
