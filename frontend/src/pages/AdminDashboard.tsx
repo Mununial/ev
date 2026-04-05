@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { io } from 'socket.io-client';
 import RideMap from '../components/RideMap';
-import { LayoutDashboard, Car, Bike, Users, Activity, BarChart3, Settings, Battery, Shield, ArrowUpRight, Search, Plus, Navigation2, Zap, Globe, Menu, X, Filter, RefreshCw, Smartphone, IndianRupee, Trash2, Edit3, MoreVertical, CheckCircle2, LogOut } from 'lucide-react';
+import { LayoutDashboard, Car, Bike, Users, Activity, BarChart3, Settings, Battery, Shield, ArrowUpRight, Search, Plus, Navigation2, Zap, Globe, Menu, X, Filter, RefreshCw, Smartphone, IndianRupee, Trash2, Edit3, MoreVertical, CheckCircle2, LogOut, AlertTriangle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { CAMPUS_CENTER, KIIT_LOCATIONS } from '../data/kiitData';
@@ -9,7 +9,7 @@ import { useAuth } from '../context/AuthContext';
 
 const socket = io(import.meta.env.VITE_API_URL);
 
-type DashboardView = 'ops' | 'assets' | 'providers' | 'grid' | 'revenue' | 'config';
+type DashboardView = 'ops' | 'assets' | 'providers' | 'grid' | 'revenue' | 'config' | 'safety';
 
 export default function AdminDashboard() {
     const { logout } = useAuth();
@@ -27,6 +27,8 @@ export default function AdminDashboard() {
     const [activeTab, setActiveTab] = useState<'live' | 'assets'>('live');
     const [loading, setLoading] = useState(true);
     const [currentView, setCurrentView] = useState<DashboardView>('ops');
+    const [sosAlerts, setSosAlerts] = useState<any[]>([]);
+    const [complaints, setComplaints] = useState<any[]>([]);
 
     const fetchVehicles = async () => {
         try {
@@ -87,11 +89,39 @@ export default function AdminDashboard() {
             });
         }, 3000);
 
+        const fetchSafetyData = async () => {
+            try {
+                const sResp = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/sos`);
+                setSosAlerts(await sResp.json());
+                const cResp = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/complaints`);
+                setComplaints(await cResp.json());
+            } catch (e) {}
+        };
+        fetchSafetyData();
+
+        socket.on('new_sos_alert', (alert) => {
+            setSosAlerts(prev => [alert, ...prev]);
+            alert('🚨 CRITICAL SOS ALERT RECEIVED!');
+        });
+
+        socket.on('new_complaint', (comp) => {
+            setComplaints(prev => [comp, ...prev]);
+        });
+
         return () => {
             clearInterval(simInterval);
             socket.off('fleet_update');
+            socket.off('new_sos_alert');
+            socket.off('new_complaint');
         };
     }, []);
+
+    const clearSOS = async (id: string) => {
+        try {
+            await fetch(`${import.meta.env.VITE_API_URL}/api/admin/sos/${id}`, { method: 'DELETE' });
+            setSosAlerts(prev => prev.filter(s => s.id !== id));
+        } catch(e) {}
+    };
 
     const handleAddEV = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -541,6 +571,89 @@ export default function AdminDashboard() {
                              </div>
                         </motion.div>
                     )}
+                    {currentView === 'safety' && (
+                        <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="flex flex-col gap-10">
+                            <header className="flex justify-between items-end">
+                                <div>
+                                    <h2 className="text-4xl font-black italic uppercase tracking-tighter text-slate-900">Safety Hub</h2>
+                                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mt-2">Active Emergency Alerts & Dispute Management</p>
+                                </div>
+                                <div className="flex gap-4">
+                                    <div className="px-6 py-3 bg-rose-100 border border-rose-200 rounded-2xl flex items-center gap-3">
+                                        <div className="w-2 h-2 bg-rose-500 rounded-full animate-ping" />
+                                        <span className="text-[10px] font-black uppercase text-rose-600">{sosAlerts.length} SOS ACTIVE</span>
+                                    </div>
+                                </div>
+                            </header>
+
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+                                <div className="space-y-6">
+                                    <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-400 flex items-center gap-3"><Shield size={14} className="text-rose-500" /> Emergency SOS Queue</h3>
+                                    <div className="space-y-4">
+                                        {sosAlerts.length === 0 ? (
+                                            <div className="p-10 border-2 border-dashed border-slate-200 rounded-[2.5rem] text-center opacity-40 font-black uppercase text-[10px] tracking-widest text-slate-400">No Active Emergencies</div>
+                                        ) : sosAlerts.map(sos => (
+                                            <div key={sos.id} className="bg-rose-50 border-2 border-rose-200 p-8 rounded-[2.5rem] shadow-xl relative overflow-hidden">
+                                                <div className="absolute top-0 right-0 p-4 opacity-10"><AlertTriangle size={80} className="text-rose-900" /></div>
+                                                <div className="flex justify-between items-start mb-6">
+                                                    <div>
+                                                        <h4 className="text-xl font-black uppercase tracking-tighter text-rose-700">{sos.userName}</h4>
+                                                        <p className="text-[10px] font-bold text-rose-500/60 uppercase mt-1">ID: {sos.userId} ● RIDE: {sos.rideId || 'Standalone'}</p>
+                                                    </div>
+                                                    <button onClick={() => clearSOS(sos.id)} className="p-3 bg-rose-600 text-white rounded-xl active:scale-95 transition-transform shadow-lg"><CheckCircle2 size={18} /></button>
+                                                </div>
+                                                <div className="grid grid-cols-2 gap-4 mb-6">
+                                                    <div className="bg-white p-4 rounded-2xl border border-rose-100">
+                                                        <p className="text-[9px] font-black text-slate-400 uppercase mb-1">Live Coordinates</p>
+                                                        <p className="text-xs font-black text-slate-900">{sos.location[0].toFixed(4)}, {sos.location[1].toFixed(4)}</p>
+                                                    </div>
+                                                    <div className="bg-white p-4 rounded-2xl border border-rose-100">
+                                                        <p className="text-[9px] font-black text-slate-400 uppercase mb-1">Contact Link</p>
+                                                        <a href={`tel:${sos.userPhone}`} className="text-xs font-black text-indigo-600 underline decoration-2">{sos.userPhone}</a>
+                                                    </div>
+                                                </div>
+                                                <div className="w-full h-2 bg-rose-200 rounded-full overflow-hidden">
+                                                    <motion.div animate={{ opacity: [1, 0.4, 1] }} transition={{ repeat: Infinity, duration: 1 }} className="h-full bg-rose-500 w-full" />
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div className="space-y-6">
+                                    <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-400 flex items-center gap-3"><MoreVertical size={14} className="text-indigo-500" /> Platform Complaints</h3>
+                                    <div className="bg-white border border-slate-300 rounded-[3rem] overflow-hidden shadow-sm">
+                                        <div className="p-4 bg-slate-50 border-b border-slate-200 flex justify-between">
+                                            <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-4">Latest Logs</span>
+                                            <span className="text-[10px] font-black uppercase tracking-widest text-indigo-600 px-4">{complaints.length} Total</span>
+                                        </div>
+                                        <div className="divide-y divide-slate-100 max-h-[600px] overflow-y-auto no-scrollbar">
+                                            {complaints.length === 0 ? (
+                                                <div className="p-20 text-center text-[10px] font-black text-slate-300 uppercase italic">Clean log: No user grievances</div>
+                                            ) : complaints.map(comp => (
+                                                <div key={comp.id} className="p-8 hover:bg-slate-50 transition-all flex flex-col gap-4 text-slate-900">
+                                                    <div className="flex justify-between items-start">
+                                                        <div>
+                                                            <p className="text-xs font-black uppercase">{comp.userName}</p>
+                                                            <p className="text-[9px] font-bold text-slate-400 uppercase mt-1">Ride ID: {comp.rideId}</p>
+                                                        </div>
+                                                        <span className="text-[9px] font-black bg-indigo-50 text-indigo-600 border border-indigo-100 px-3 py-1.5 rounded-lg uppercase tracking-widest">Review Pending</span>
+                                                    </div>
+                                                    <p className="text-sm font-bold text-slate-600 bg-slate-100 p-5 rounded-2xl border-l-4 border-indigo-400">"{comp.text}"</p>
+                                                    {comp.driverInfo && (
+                                                        <div className="flex items-center gap-3 mt-2 text-[10px] font-black uppercase text-slate-400">
+                                                            <span>Dispute against:</span>
+                                                            <span className="text-indigo-600">{comp.driverInfo.pilot}</span>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </motion.div>
+                    )}
                 </AnimatePresence>
 
                 {/* Add EV Modal */}
@@ -671,6 +784,7 @@ function AdminSidebarContent({ currentView, changeView, logout }: any) {
                 <NavItem icon={<Users />} label="Provider List" active={currentView === 'providers'} onClick={() => changeView('providers')} />
                 <NavItem icon={<Globe />} label="Grid Monitor" active={currentView === 'grid'} onClick={() => changeView('grid')} />
                 <NavItem icon={<BarChart3 />} label="Revenue Hub" active={currentView === 'revenue'} onClick={() => changeView('revenue')} />
+                <NavItem icon={<Shield />} label="Safety Hub" active={currentView === 'safety'} onClick={() => changeView('safety')} />
             </nav>
 
             <div className="mt-auto flex flex-col gap-6">

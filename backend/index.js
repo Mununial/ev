@@ -95,12 +95,22 @@ const PORT = process.env.PORT || 5000;
 // In-memory driver storage for real-time (ephemeral, which is fine for current session tracking)
 let onlineProviders = {}; // { providerId: { socketId, location, vehicleData } }
 let activeRides = {}; // maps rideId to providerId to enforce single assignment
+let campusComplaints = []; // ephemeral storage for complaints
+let activeSOS = []; // ephemeral storage for SOS alerts
 
 io.on('connection', (socket) => {
   console.log('New client connected:', socket.id);
 
   // Provider goes online
-  socket.on('provider_online', (data) => {
+  socket.on('provider_online', async (data) => {
+    // Check if blocked
+    if (firestore) {
+        const userDoc = await firestore.collection('users').doc(data.uid || '').get();
+        if (userDoc.exists && userDoc.data().blocked) {
+            socket.emit('blocked_account');
+            return;
+        }
+    }
     onlineProviders[data.providerId] = {
       socketId: socket.id,
       location: data.location,
@@ -134,8 +144,18 @@ io.on('connection', (socket) => {
   });
 
   // Provider accepts ride
-  socket.on('accept_ride', (data) => {
-    const { rideId, providerId } = data;
+  socket.on('accept_ride', async (data) => {
+    const { rideId, providerId, uid } = data;
+    
+    // Check if blocked
+    if (firestore && uid) {
+        const userDoc = await firestore.collection('users').doc(uid).get();
+        if (userDoc.exists && userDoc.data().blocked) {
+            socket.emit('blocked_account');
+            return;
+        }
+    }
+
     if (activeRides[rideId] !== null && activeRides[rideId] !== undefined) {
       socket.emit('ride_already_accepted');
       return; 
@@ -383,6 +403,34 @@ app.post('/api/auth/delete', async (req, res) => {
         await firestore.collection('users').doc(uid).delete();
         res.json({ success: true, message: 'Purged.' });
     } catch { res.status(500).json({ success: false }); }
+});
+
+// Real-time SOS & Complaints
+app.post('/api/admin/sos', (req, res) => {
+    const sosAlert = { ...req.body, timestamp: new Date(), id: `SOS-${Date.now()}` };
+    activeSOS.push(sosAlert);
+    io.emit('new_sos_alert', sosAlert);
+    res.json({ success: true });
+});
+
+app.get('/api/admin/sos', (req, res) => {
+    res.json(activeSOS);
+});
+
+app.post('/api/admin/complaints', (req, res) => {
+    const complaint = { ...req.body, timestamp: new Date(), id: `CMP-${Date.now()}` };
+    campusComplaints.push(complaint);
+    io.emit('new_complaint', complaint);
+    res.json({ success: true });
+});
+
+app.get('/api/admin/complaints', (req, res) => {
+    res.json(campusComplaints);
+});
+
+app.delete('/api/admin/sos/:id', (req, res) => {
+    activeSOS = activeSOS.filter(s => s.id !== req.params.id);
+    res.json({ success: true });
 });
 
 app.get('/', (req, res) => {

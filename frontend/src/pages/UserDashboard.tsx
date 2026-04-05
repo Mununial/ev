@@ -54,7 +54,10 @@ export default function UserDashboard() {
     const [newMessage, setNewMessage] = useState('');
     const [isCalling, setIsCalling] = useState(false);
     const [showSOS, setShowSOS] = useState(false);
+    const [isSOSLoading, setIsSOSLoading] = useState(false);
     const [cancelReasonOpen, setCancelReasonOpen] = useState(false);
+    const [showComplaint, setShowComplaint] = useState(false);
+    const [complaintText, setComplaintText] = useState('');
     const [rating, setRating] = useState(0);
 
     const chatEndRef = useRef<HTMLDivElement>(null);
@@ -238,6 +241,49 @@ export default function UserDashboard() {
         socket.emit('send_message', msgData);
     };
 
+    const triggerSOS = async () => {
+        setIsSOSLoading(true);
+        try {
+            await fetch(`${import.meta.env.VITE_API_URL}/api/admin/sos`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    userId: user.uid,
+                    userName: user.displayName || user.name,
+                    userPhone: user.phone || user.phoneNumber,
+                    rideId: rideId,
+                    location: userLocation || [20.35, 85.82] // Fallback to Campus
+                })
+            });
+            alert('🚨 COMMAND CENTER ALERTED. Campus Security is on the way.');
+            setShowSOS(false);
+        } catch (e) {
+            console.error(e);
+        } finally {
+            setIsSOSLoading(false);
+        }
+    };
+
+    const submitComplaint = async () => {
+        if (!complaintText.trim()) return;
+        try {
+            await fetch(`${import.meta.env.VITE_API_URL}/api/admin/complaints`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    userId: user.uid,
+                    userName: user.displayName || user.name,
+                    text: complaintText,
+                    rideId: rideId,
+                    driverInfo: driver
+                })
+            });
+            alert('Complaint Logged. Admin will review this shortly.');
+            setComplaintText('');
+            setShowComplaint(false);
+        } catch(e) { console.error(e); }
+    };
+
     const handleBooking = () => {
         if (!pickup || !drop) return;
         const newOtp = Math.floor(1000 + Math.random() * 9000).toString();
@@ -302,6 +348,9 @@ export default function UserDashboard() {
                         <div className="w-2.5 h-2.5 bg-[#00C853] rounded-full animate-pulse" />
                         <span className="text-[10px] font-black uppercase tracking-widest text-[#212121]">Network Live</span>
                     </div>
+                    <button onClick={() => setShowComplaint(true)} className="bg-white/95 backdrop-blur-md px-5 py-3 rounded-full shadow-lg flex items-center gap-2 border border-red-100 text-red-500 font-black text-[10px] uppercase tracking-widest active:scale-95 transition-all">
+                        <Activity size={14} /> Support
+                    </button>
                 </div>
             </nav>
 
@@ -726,8 +775,29 @@ export default function UserDashboard() {
                             <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6 text-red-500"><AlertTriangle size={36} /></div>
                             <h2 className="text-2xl font-black uppercase tracking-tighter text-[#212121]">Emergency SOS</h2>
                             <p className="text-sm font-bold text-gray-500 mt-3 mb-8">This will immediately alert Campus Security and broadcast your live location.</p>
-                            <button className="w-full py-5 bg-red-500 text-white rounded-[20px] font-black uppercase tracking-widest hover:bg-red-600 active:scale-95 transition-transform shadow-[0_10px_30px_rgba(239,68,68,0.3)] mb-4">Trigger Alarm</button>
+                            <button onClick={triggerSOS} disabled={isSOSLoading} className="w-full py-5 bg-red-500 text-white rounded-[20px] font-black uppercase tracking-widest hover:bg-red-600 active:scale-95 transition-transform shadow-[0_10px_30px_rgba(239,68,68,0.3)] mb-4 disabled:opacity-50">
+                                {isSOSLoading ? 'Triggering...' : 'Trigger Alarm'}
+                            </button>
                             <button onClick={() => setShowSOS(false)} className="text-xs font-bold text-gray-400 hover:text-gray-600 uppercase tracking-widest">Cancel</button>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            <AnimatePresence>
+                {showComplaint && (
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[7000] flex items-center justify-center p-6 bg-black/80 backdrop-blur-sm">
+                        <motion.div initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} className="bg-white w-full max-w-sm p-8 rounded-[2.5rem] shadow-2xl">
+                            <h2 className="text-2xl font-black uppercase tracking-tighter text-[#212121]">Log Complaint</h2>
+                            <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mt-2 mb-6">Describe the issue for Admin review</p>
+                            <textarea 
+                                value={complaintText}
+                                onChange={e => setComplaintText(e.target.value)}
+                                className="w-full h-32 bg-gray-50 border border-gray-100 rounded-3xl p-5 text-sm font-bold outline-none focus:border-red-200 transition-all mb-6 resize-none"
+                                placeholder="Example: Driver asked for extra money..."
+                            />
+                            <button onClick={submitComplaint} className="w-full py-5 bg-black text-white rounded-[20px] font-black uppercase tracking-widest active:scale-95 transition-transform shadow-xl mb-4">Submit Report</button>
+                            <button onClick={() => setShowComplaint(false)} className="w-full text-xs font-bold text-gray-400 uppercase tracking-widest">Maybe Later</button>
                         </motion.div>
                     </motion.div>
                 )}
