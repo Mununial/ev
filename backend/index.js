@@ -26,13 +26,16 @@ const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 // Initialize Firebase Admin (Assuming serviceAccountKey.json is in the backend root)
 const serviceAccountPath = path.join(__dirname, 'serviceAccountKey.json');
+let firestore;
+
 if (fs.existsSync(serviceAccountPath)) {
   try {
     const serviceAccount = JSON.parse(fs.readFileSync(serviceAccountPath, 'utf8'));
     admin.initializeApp({
       credential: admin.credential.cert(serviceAccount)
     });
-    console.log('Firebase Admin SDK Initialized Successfully.');
+    firestore = admin.firestore();
+    console.log('Firebase Admin SDK & Firestore Initialized Successfully.');
   } catch (err) {
     console.error('Failed to parse serviceAccountKey.json:', err);
   }
@@ -74,7 +77,7 @@ app.post('/api/auth/google', async (req, res) => {
 
 const PORT = process.env.PORT || 5000;
 
-// In-memory driver storage for real-time (can sync with Firestore)
+// In-memory driver storage for real-time (ephemeral, which is fine for current session tracking)
 let onlineProviders = {}; // { providerId: { socketId, location, vehicleData } }
 let activeRides = {}; // maps rideId to providerId to enforce single assignment
 
@@ -97,9 +100,8 @@ io.on('connection', (socket) => {
   socket.on('update_location', (data) => {
     if (onlineProviders[data.providerId]) {
       onlineProviders[data.providerId].location = data.location;
-      onlineProviders[data.providerId].vehicle = data.vehicle; // Update battery/health
+      onlineProviders[data.providerId].vehicle = data.vehicle; 
       
-      // Update specific ride user if busy
       if (data.rideId) {
         socket.to(data.rideId).emit('driver_location', data.location);
       }
@@ -111,25 +113,19 @@ io.on('connection', (socket) => {
   // User requests a ride
   socket.on('request_ride', (rideData) => {
     console.log('New ride request:', rideData.id);
-    activeRides[rideData.id] = null; // Mark ride as unassigned
-    // Broadcast to all nearby (simplified: all) online providers
-    socket.join(rideData.id); // User joins ride room
+    activeRides[rideData.id] = null; 
+    socket.join(rideData.id); 
     io.emit('new_ride_request', rideData);
   });
 
   // Provider accepts ride
   socket.on('accept_ride', (data) => {
     const { rideId, providerId } = data;
-    
-    // Check if ride was already assigned!
     if (activeRides[rideId] !== null && activeRides[rideId] !== undefined) {
       socket.emit('ride_already_accepted');
       return; 
     }
-    
-    // Secure the ride for this provider
     activeRides[rideId] = providerId;
-    
     if (onlineProviders[providerId]) {
       onlineProviders[providerId].status = 'busy';
       socket.join(rideId);
@@ -150,7 +146,6 @@ io.on('connection', (socket) => {
     io.to(rideId).emit('status_change', { status });
     
     if (status === 'completed' || status === 'cancelled') {
-        // Free the provider
         const pId = Object.keys(onlineProviders).find(id => onlineProviders[id].socketId === socket.id);
         if (pId) onlineProviders[pId].status = 'available';
         io.emit('fleet_update', onlineProviders);
@@ -160,12 +155,10 @@ io.on('connection', (socket) => {
   // Chat Messages
   socket.on('send_message', (data) => {
     const { rideId, message, sender } = data;
-    // Broadcast to others in the room
     socket.to(rideId).emit('receive_message', { message, sender, timestamp: new Date() });
   });
 
   socket.on('disconnect', () => {
-    // Find and remove provider if they were online
     const pId = Object.keys(onlineProviders).find(id => onlineProviders[id].socketId === socket.id);
     if (pId) {
       delete onlineProviders[pId];
@@ -175,57 +168,38 @@ io.on('connection', (socket) => {
   });
 });
 
-// Ride Completion & Email Receipt
+// Ride Completion & Email Receipt (Now saves to Firestore)
 app.post('/api/rides/complete', async (req, res) => {
   const { rideId, userEmail, pickup, drop, fare, driverName } = req.body;
   
   try {
+    const rideRef = firestore.collection('rides').doc(rideId);
+    await rideRef.set({
+        userEmail,
+        pickup,
+        drop,
+        fare,
+        driverName,
+        status: 'completed',
+        timestamp: admin.firestore.FieldValue.serverTimestamp()
+    });
+
     const mailOptions = {
       from: process.env.MAIL_DEFAULT_SENDER,
       to: userEmail,
       subject: `Your SmileSphere EV Trip Receipt - ${rideId}`,
-      html: `
-        <div style="font-family: sans-serif; background: #0f172a; color: #f8fafc; padding: 40px; border-radius: 24px; max-width: 600px; margin: auto;">
-            <div style="background: #22c55e; width: 60px; height: 60px; border-radius: 12px; display: flex; align-items: center; justify-content: center; margin-bottom: 24px;">
-                <img src="https://img.icons8.com/ios-filled/50/ffffff/checked-checkbox.png" width="30"/>
-            </div>
-            <h1 style="font-size: 24px; font-weight: 800; margin-bottom: 8px;">Thanks for riding green, Michael!</h1>
-            <p style="color: #94a3b8; font-size: 16px; margin-bottom: 32px;">You saved <strong>0.8kg</strong> of CO2 on this trip.</p>
-            
-            <div style="background: rgba(255,255,255,0.05); padding: 24px; border-radius: 16px; margin-bottom: 32px;">
-                <div style="display: flex; justify-content: space-between; margin-bottom: 16px;">
-                    <span style="color: #64748b;">Total Fare</span>
-                    <span style="font-weight: 800; font-size: 20px;">₹${fare || '15.50'}</span>
-                </div>
-                <div style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 16px;">
-                    <p style="font-size: 14px; margin: 4px 0;"><span style="color: #22c55e;">●</span> <strong>Pickup:</strong> ${pickup}</p>
-                    <p style="font-size: 14px; margin: 4px 0;"><span style="color: #ef4444;">●</span> <strong>Drop:</strong> ${drop}</p>
-                </div>
-            </div>
-
-            <div style="display: flex; align-items: center; gap: 12px;">
-                <div style="background: #1e293b; width: 40px; height: 40px; border-radius: 50%; text-align: center; line-height: 40px;">🚗</div>
-                <div>
-                   <p style="margin: 0; font-weight: bold; font-size: 14px;">Driver: ${driverName || 'Alex Johnson'}</p>
-                   <p style="margin: 0; color: #64748b; font-size: 12px;">Tesla Model 3 • EV401</p>
-                </div>
-            </div>
-            
-            <p style="font-size: 12px; color: #475569; margin-top: 40px; text-align: center;">Powered by SmileSphere EV Mobility Systems</p>
-        </div>
-      `,
+      html: `Trip details for ${rideId} at ₹${fare}.`, // Simplified
     };
 
     await transporter.sendMail(mailOptions);
-    console.log(`Receipt sent to ${userEmail} for ride ${rideId}`);
-    res.json({ success: true, message: 'Receipt sent' });
+    res.json({ success: true, message: 'Receipt sent and ride recorded' });
   } catch (error) {
-    console.error('Email error:', error);
-    res.status(500).json({ error: 'Failed to send receipt' });
+    console.error('Ride Completion Error:', error);
+    res.status(500).json({ error: 'Failed to record ride completion' });
   }
 });
 
-// Vehicle asset storage (Simulated DB)
+// Vehicle asset storage (Simulated DB - Can also move to Firestore if needed)
 let registeredVehicles = [
     { id: 'EV-101', plate: 'OD-02-KIIT-01', model: 'Tata Nexon EV', status: 'active', battery: 92 },
     { id: 'EV-102', plate: 'OD-02-KIIT-02', model: 'Ather 450X', status: 'standby', battery: 84 },
@@ -245,207 +219,138 @@ app.delete('/api/vehicles', (req, res) => {
     const { plate } = req.body;
     const initialCount = registeredVehicles.length;
     registeredVehicles = registeredVehicles.filter(v => v.plate !== plate);
-    
     if (registeredVehicles.length < initialCount) {
-        res.json({ success: true, message: 'Asset purged from Grid Inventory' });
+        res.json({ success: true, message: 'Asset purged' });
     } else {
         res.status(404).json({ success: false, error: 'Asset not found' });
     }
 });
 
-// Database Simulation
-const dbPath = path.join(__dirname, 'db.json');
-
-let db = { users: [], uniquePasswords: [] };
-if (fs.existsSync(dbPath)) {
-    db = JSON.parse(fs.readFileSync(dbPath, 'utf8'));
-} else {
-    fs.writeFileSync(dbPath, JSON.stringify(db));
-}
-
-const saveDB = () => fs.writeFileSync(dbPath, JSON.stringify(db, null, 2));
-
-const otpStore = {};
-
-// Auth Endpoint (Send OTP only for verification if needed)
-app.post('/api/auth/send-otp', async (req, res) => {
-    const { email, name } = req.body;
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    otpStore[email] = { otp, expires: Date.now() + 600000, name }; 
-
-    try {
-        await transporter.sendMail({
-            from: process.env.MAIL_DEFAULT_SENDER,
-            to: email,
-            subject: `SmileSphere Verification Code - ${otp}`,
-            text: `Your Verification Code is ${otp}`
-        });
-        res.json({ success: true, message: 'OTP sent' });
-    } catch (e) {
-        console.error('SMTP OTP Error:', e);
-        res.status(500).json({ error: 'Failed to send OTP' });
-    }
-});
-
-// Admin Pilot Creation API
+// Admin Pilot Creation API (Uses Firestore)
 app.post('/api/admin/create-pilot', async (req, res) => {
     const { name, email, password, vehicleType, vehicleNumber } = req.body;
     
-    // Check if email already exists
-    const existingUser = db.users.find(u => u.email === email);
-    if (existingUser) return res.status(400).json({ success: false, error: `Email already exists as a ${existingUser.role.toUpperCase()}. One account per email only.` });
-    
-    try {
-        // Step 1: Create in Firebase if Admin SDK is initialized
-        let firebaseUid = 'PILOT_' + Math.random().toString(36).substr(2, 9);
-        if (admin.apps.length > 0) {
-            try {
-                const fUser = await admin.auth().createUser({
-                    email,
-                    password,
-                    displayName: name
-                });
-                firebaseUid = fUser.uid;
-                console.log(`Firebase Identity created for Pilot ${email}`);
-            } catch (authError) {
-                console.error('Firebase Pilot Creation Error:', authError);
-                return res.status(500).json({ success: false, error: 'Failed to register Pilot in Firebase.' });
-            }
-        }
+    if (!firestore) return res.status(500).json({ success: false, error: 'Firestore Admin not initialized.' });
 
-        // Step 2: Save metadata in Grid DB
+    try {
+        const userRef = firestore.collection('users').where('email', '==', email);
+        const snapshot = await userRef.get();
+        if (!snapshot.empty) return res.status(400).json({ success: false, error: 'Email already registered.' });
+
+        const fUser = await admin.auth().createUser({ email, password, displayName: name });
         const salt = bcrypt.genSaltSync(10);
         const hashedPassword = bcrypt.hashSync(password, salt);
-        
+
         const newUser = {
-            uid: firebaseUid,
-            name, email, password: hashedPassword, role: 'provider', vehicleType, vehicleNumber
+            uid: fUser.uid,
+            name, email, password: hashedPassword, role: 'provider', vehicleType, vehicleNumber, blocked: false
         };
         
-        db.users.push(newUser);
-        db.uniquePasswords.push(hashedPassword);
-        saveDB();
-        
-        res.json({ success: true, user: { uid: firebaseUid, displayName: name, email, role: 'provider' } });
+        await firestore.collection('users').doc(fUser.uid).set(newUser);
+        res.json({ success: true, user: { uid: fUser.uid, name, role: 'provider' } });
     } catch (err) {
         console.error('Admin Pilot Creation Error:', err);
         res.status(500).json({ success: false, error: 'Internal Grid Error' });
     }
 });
 
-app.get('/api/admin/pilots', (req, res) => {
-    const pilots = db.users.filter(u => u.role === 'provider').map(p => ({
-        uid: p.uid, name: p.name, email: p.email, vehicleType: p.vehicleType, vehicleNumber: p.vehicleNumber, blocked: !!p.blocked
-    }));
-    res.json(pilots);
+app.get('/api/admin/pilots', async (req, res) => {
+    if (!firestore) return res.json([]);
+    try {
+        const pilotsSnapshot = await firestore.collection('users').where('role', '==', 'provider').get();
+        const pilots = pilotsSnapshot.docs.map(doc => ({
+            uid: doc.id, ...doc.data()
+        }));
+        res.json(pilots);
+    } catch { res.json([]); }
 });
 
-app.post('/api/admin/toggle-block-pilot', (req, res) => {
+app.post('/api/admin/toggle-block-pilot', async (req, res) => {
     const { uid } = req.body;
-    const user = db.users.find(u => u.uid === uid);
-    if (!user) return res.status(404).json({ success: false, error: 'Pilot not found' });
-    user.blocked = !user.blocked;
-    saveDB();
-    res.json({ success: true, blocked: user.blocked });
+    if (!firestore) return res.status(500).json({ success: false });
+    try {
+        const userRef = firestore.collection('users').doc(uid);
+        const user = await userRef.get();
+        if (!user.exists) return res.status(404).json({ success: false });
+        const newStatus = !user.data().blocked;
+        await userRef.update({ blocked: newStatus });
+        res.json({ success: true, blocked: newStatus });
+    } catch { res.status(500).json({ success: false }); }
 });
 
-// Verify OTP Endpoint
-app.post('/api/auth/verify-otp', (req, res) => {
-    const { email, otp } = req.body;
-    const stored = otpStore[email];
-    
-    if (stored && stored.otp === otp && Date.now() < stored.expires) {
-        res.json({ success: true });
-    } else {
-        res.status(400).json({ success: false, error: 'Invalid or expired OTP' });
-    }
-});
-
-// Auth Register (Metadata only, assuming Firebase User created by Client)
-app.post('/api/auth/register', (req, res) => {
+// Auth Register (Uses Firestore)
+app.post('/api/auth/register', async (req, res) => {
     const { name, email, password, role, vehicleType, vehicleNumber, uid } = req.body;
-    
-    // One email = One account (Role is locked)
-    const existingUser = db.users.find(u => u.email === email);
-    if (existingUser) {
-        return res.status(400).json({ success: false, error: `Account for ${email} already registered as a ${existingUser.role.toUpperCase()}. User identity is fixed.` });
-    }
-    
-    const salt = bcrypt.genSaltSync(10);
-    const hashedPassword = bcrypt.hashSync(password, salt);
-    
-    const newUser = {
-        uid: uid || (role === 'provider' ? 'PILOT_' : 'USER_') + Math.random().toString(36).substr(2, 9),
-        name, email, password: hashedPassword, role, vehicleType: role === 'provider' ? vehicleType : null, vehicleNumber: role === 'provider' ? vehicleNumber : null
-    };
-    
-    db.users.push(newUser);
-    db.uniquePasswords.push(hashedPassword);
-    saveDB();
-    
-    res.json({ success: true, user: { uid: newUser.uid, displayName: name, email, role, vehicleType, vehicleNumber } });
+    if (!firestore) return res.status(500).json({ success: false });
+
+    try {
+        const userRef = firestore.collection('users').doc(uid);
+        const existing = await userRef.get();
+        if (existing.exists) return res.status(400).json({ success: false, error: 'Identity already locked.' });
+        
+        const salt = bcrypt.genSaltSync(10);
+        const hashedPassword = bcrypt.hashSync(password, salt);
+        
+        const newUser = {
+            uid, name, email, password: hashedPassword, role, vehicleType: role === 'provider' ? vehicleType : null, vehicleNumber: role === 'provider' ? vehicleNumber : null, blocked: false
+        };
+        
+        await userRef.set(newUser);
+        res.json({ success: true, user: newUser });
+    } catch { res.status(500).json({ success: false }); }
 });
 
-// Login Endpoint (Handles Migration and UI Sync)
-app.post('/api/auth/login', (req, res) => {
+// Login Endpoint (Firestore Sync)
+app.post('/api/auth/login', async (req, res) => {
     const { email, password, requestedRole, uid } = req.body;
-    
-    // Migration logic: Find by email since UIDs might change during Firebase move
-    const user = db.users.find(u => u.email === email);
-    
-    if (!user) {
-        return res.status(400).json({ success: false, error: 'User mapping not found in Grid DB' });
-    }
+    if (!firestore) return res.status(500).json({ success: false });
 
-    // UID Sync: If current user has a placeholder UID, update it to Firebase UID on first login
-    if (uid && user.uid !== uid) {
-        user.uid = uid;
-        saveDB();
-        console.log(`Grid UID Sync: User ${email} identity mapped.`);
-    }
+    try {
+        let user;
+        if (uid) {
+            const userRef = firestore.collection('users').doc(uid);
+            const doc = await userRef.get();
+            if (doc.exists) user = doc.data();
+        }
 
-    if (user.blocked) {
-        return res.status(403).json({ success: false, error: 'Access Denied: Your account has been suspended by the Admin.' });
-    }
-    
-    if (requestedRole && user.role !== requestedRole && user.role !== 'admin') {
-        return res.status(400).json({ success: false, error: `Account Unauthorized: This account is registered exclusively as a ${user.role.toUpperCase()}.` });
-    }
+        if (!user) {
+            const snapshot = await firestore.collection('users').where('email', '==', email).get();
+            if (!snapshot.empty) user = snapshot.docs[0].data();
+        }
 
-    // Fallback password check (only if not using Firebase Login)
-    if (!uid && !bcrypt.compareSync(password, user.password)) {
-        return res.status(400).json({ success: false, error: 'Invalid credentials' });
-    }
-    
-    res.json({ success: true, user: { uid: user.uid, displayName: user.name, email: user.email, role: user.role, vehicleType: user.vehicleType, vehicleNumber: user.vehicleNumber } });
+        if (!user) return res.status(400).json({ success: false, error: 'Entity not found.' });
+
+        if (uid && user.uid !== uid) {
+            await firestore.collection('users').doc(uid).set({ ...user, uid });
+            await firestore.collection('users').doc(user.uid).delete();
+            user.uid = uid;
+            console.log(`Grid UID Sync: ${email} Identity mapped.`);
+        }
+
+        if (user.blocked) return res.status(403).json({ success: false, error: 'Suspended.' });
+        if (requestedRole && user.role !== requestedRole && user.role !== 'admin') {
+            return res.status(400).json({ success: false, error: `Unauthorized role.` });
+        }
+
+        res.json({ success: true, user });
+    } catch { res.status(500).json({ success: false }); }
 });
 
 app.post('/api/auth/delete', async (req, res) => {
     const { email } = req.body;
-    const userToDel = db.users.find(u => u.email === email);
-    if (!userToDel) return res.status(404).json({ success: false, error: 'User not found' });
-    
+    if (!firestore) return res.status(500).json({ success: false });
     try {
-        // Step 1: Remove from Firebase if Admin SDK is online
-        if (admin.apps.length > 0) {
-            try {
-                const fUser = await admin.auth().getUserByEmail(email);
-                await admin.auth().deleteUser(fUser.uid);
-            } catch (e) { console.warn('User not found in Firebase. Continuing DB purge.'); }
-        }
-
-        // Step 2: Purge from Grid DB
-        db.uniquePasswords = db.uniquePasswords.filter(h => h !== userToDel.password);
-        db.users = db.users.filter(u => u.email !== email);
-        saveDB();
-        res.json({ success: true, message: 'Account securely purged from Grid Ecosystem.' });
-    } catch (err) {
-        res.status(500).json({ success: false, error: 'Failed to purge account sync.' });
-    }
+        const snapshot = await firestore.collection('users').where('email', '==', email).get();
+        if (snapshot.empty) return res.status(404).json({ success: false });
+        const uid = snapshot.docs[0].id;
+        try { await admin.auth().deleteUser(uid); } catch(e) {}
+        await firestore.collection('users').doc(uid).delete();
+        res.json({ success: true, message: 'Purged.' });
+    } catch { res.status(500).json({ success: false }); }
 });
 
 app.get('/', (req, res) => {
-  res.send('EV Ride Share Backend is Running');
+  res.send('EV Ride Share Backend (Firestore Mode) is Running');
 });
 
 server.listen(PORT, () => {
