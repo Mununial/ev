@@ -184,23 +184,28 @@ export default function ProviderDashboard() {
         <div className="h-[100dvh] w-full lg:flex lg:flex-row bg-slate-50 overflow-hidden font-sans text-slate-900 relative">
             {/* Control Sidebar */}
             <div className="absolute lg:relative top-0 left-0 w-full max-h-[50vh] lg:max-h-none lg:h-full lg:w-[420px] bg-white border-b lg:border-r lg:border-b-0 border-slate-300 p-4 pb-6 lg:p-10 flex flex-col gap-4 lg:gap-8 z-[100] shrink-0 shadow-[0_20px_50px_rgba(0,0,0,0.2)] rounded-b-[2rem] lg:rounded-none overflow-hidden">
-                <header className="flex justify-between items-center px-1 lg:px-0">
-                    <div className="flex items-center gap-3 lg:gap-5">
-                        <button onClick={() => setIsMenuOpen(true)} className="p-3 bg-slate-100 rounded-2xl lg:hidden hover:bg-slate-200 border border-slate-300"><Menu className="w-5 h-5 text-slate-400" /></button>
-                        <div>
-                            <h1 className="text-xl lg:text-3xl font-black italic tracking-tighter leading-none italic uppercase">SMILESPHERE <span className="text-primary-500">PILOT</span></h1>
-                            <p className="text-[8px] lg:text-[10px] text-slate-500 font-black uppercase tracking-[0.3em] mt-1 lg:mt-2 opacity-60">Grid Protocol 4.1</p>
+                <header className="flex flex-col lg:flex-row lg:justify-between lg:items-center gap-4 px-1 lg:px-0">
+                    <div className="flex items-center justify-between w-full lg:w-auto">
+                        <div className="flex items-center gap-3">
+                            <button onClick={() => setIsMenuOpen(true)} className="p-3 bg-slate-100 rounded-2xl lg:hidden hover:bg-slate-200 border border-slate-300"><Menu className="w-5 h-5 text-slate-400" /></button>
+                            <div>
+                                <h1 className="text-xl lg:text-2xl font-black italic tracking-tighter leading-none uppercase">SMILESPHERE <span className="text-primary-500">PILOT</span></h1>
+                                <p className="text-[8px] lg:text-[9px] text-slate-500 font-black uppercase tracking-[0.3em] mt-1 opacity-60">Grid Protocol 4.1</p>
+                            </div>
                         </div>
+                        <button onClick={() => { if(window.confirm('Disconnect Pilot?')) logout(); }} className="lg:hidden p-3 bg-slate-100 border border-slate-300 rounded-2xl text-slate-500 hover:text-rose-500 transition-all">
+                            <LogOut size={16} />
+                        </button>
                     </div>
-                    <div className="flex items-center gap-2">
-                        <div className="hidden lg:flex gap-2 mr-2 border-r border-slate-200 pr-2">
-                            <button onClick={() => setView('main')} className={`px-3 py-2 rounded-xl font-black text-[9px] uppercase tracking-widest transition-all ${view === 'main' ? 'bg-primary-500 text-white shadow-lg' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}>Mission</button>
-                            <button onClick={() => setView('stats')} className={`px-3 py-2 rounded-xl font-black text-[9px] uppercase tracking-widest transition-all ${view === 'stats' ? 'bg-primary-500 text-white shadow-lg' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}>History</button>
+                    <div className="flex items-center gap-2 w-full lg:w-auto justify-center lg:justify-end">
+                        <div className="flex gap-2 mr-1">
+                            <button onClick={() => setView('main')} className={`flex-1 lg:flex-none px-4 py-2.5 rounded-2xl font-black text-[9px] uppercase tracking-widest transition-all ${view === 'main' ? 'bg-primary-500 text-white shadow-lg' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}>Mission</button>
+                            <button onClick={() => setView('stats')} className={`flex-1 lg:flex-none px-4 py-2.5 rounded-2xl font-black text-[9px] uppercase tracking-widest transition-all ${view === 'stats' ? 'bg-primary-500 text-white shadow-lg' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}>History</button>
                         </div>
-                        <button onClick={toggleOnline} className={`px-4 py-2.5 rounded-2xl font-black text-[9px] lg:text-[10px] uppercase tracking-widest transition-all flex items-center gap-2 shadow-xl ${isOnline ? 'bg-ev-green text-slate-950 shadow-ev-green/20' : 'bg-slate-800 text-slate-400 grayscale'}`}>
+                        <button onClick={toggleOnline} className={`flex-1 lg:flex-none px-4 py-2.5 rounded-2xl font-black text-[9px] uppercase tracking-widest transition-all flex items-center justify-center gap-2 shadow-xl ${isOnline ? 'bg-ev-green text-slate-950 shadow-ev-green/20' : 'bg-slate-800 text-slate-400 grayscale'}`}>
                             <Power className={`w-3.5 h-3.5 ${isOnline ? 'animate-pulse' : ''}`} /> {isOnline ? 'Active' : 'Standby'}
                         </button>
-                        <button onClick={() => { if(window.confirm('Disconnect Pilot?')) logout(); }} className="p-3 bg-slate-100 border border-slate-300 rounded-2xl text-slate-500 hover:text-rose-500 transition-all">
+                        <button onClick={() => { if(window.confirm('Disconnect Pilot?')) logout(); }} className="hidden lg:block p-3 bg-slate-100 border border-slate-300 rounded-2xl text-slate-500 hover:text-rose-500 transition-all">
                             <LogOut size={16} />
                         </button>
                     </div>
