@@ -244,7 +244,8 @@ export default function UserDashboard() {
         const rideData = {
             id: `RIDE-${Date.now()}`,
             userId: user.uid,
-            userName: user.name || user.displayName || 'Passenger',
+            userName: user.displayName || user.name || user.email?.split('@')[0] || 'Passenger',
+            userPhone: user.phoneNumber || '+919876543210',
             pickup: KIIT_LOCATIONS.find(l => l.id === pickup),
             drop: KIIT_LOCATIONS.find(l => l.id === drop),
             vehicleType: vehicleType,
@@ -313,17 +314,17 @@ export default function UserDashboard() {
                                 <div className="w-16 h-16 bg-[#00C853]/10 text-[#00C853] flex items-center justify-center rounded-full mb-4">
                                     <UserIcon size={32} />
                                 </div>
-                                <h1 className="text-2xl font-black tracking-tighter text-[#212121] truncate">{user?.name || 'Passenger'}</h1>
-                                <p className="text-[10px] font-bold text-[#00C853] mt-1 uppercase tracking-widest">Verified Account</p>
+                                <h1 className="text-2xl font-black tracking-tighter text-[#212121] truncate">{user?.displayName || user?.name || user?.email?.split('@')[0] || 'Passenger'}</h1>
+                                <p className="text-[10px] font-bold text-[#00C853] mt-1 uppercase tracking-widest">{user?.phoneNumber || user?.email || 'Verified Account'}</p>
                             </div>
                             <div className="space-y-1 p-4 flex-1 overflow-y-auto">
                                 {[
-                                    { icon: <Activity size={20}/>, label: 'Activity' },
-                                    { icon: <Star size={20}/>, label: 'Saved Places' },
-                                    { icon: <IndianRupee size={20}/>, label: 'Payments' },
-                                    { icon: <ShieldCheck size={20}/>, label: 'Safety' },
+                                    { icon: <Activity size={20}/>, label: 'Activity', action: () => { setView('history' as any); setSheetState('full'); setIsMenuOpen(false); } },
+                                    { icon: <Star size={20}/>, label: 'Saved Places', action: () => setIsMenuOpen(false) },
+                                    { icon: <IndianRupee size={20}/>, label: 'Payments', action: () => setIsMenuOpen(false) },
+                                    { icon: <ShieldCheck size={20}/>, label: 'Safety', action: () => { setShowSOS(true); setIsMenuOpen(false); } },
                                 ].map((item, i) => (
-                                    <button onClick={() => setIsMenuOpen(false)} key={i} className="w-full px-5 py-4 text-left font-bold text-gray-700 flex items-center gap-4 hover:bg-gray-50 rounded-2xl transition-all">
+                                    <button onClick={item.action} key={i} className="w-full px-5 py-4 text-left font-bold text-gray-700 flex items-center gap-4 hover:bg-gray-50 rounded-2xl transition-all">
                                         <div className="text-gray-400">{item.icon}</div>
                                         <span className="flex-1">{item.label}</span>
                                         <ChevronUp className="rotate-90 w-4 h-4 text-gray-300" />
@@ -528,9 +529,9 @@ export default function UserDashboard() {
                                 </div>
 
                                 <div className="grid grid-cols-2 gap-4">
-                                    <button onClick={() => setIsCalling(true)} className="flex py-5 bg-white border border-gray-200 rounded-3xl items-center justify-center gap-3 text-[11px] font-black uppercase text-[#212121] shadow-sm active:scale-95 transition-all">
+                                    <a href={`tel:${driver?.phone || '+910000000000'}`} className="flex py-5 bg-white border border-gray-200 rounded-3xl items-center justify-center gap-3 text-[11px] font-black uppercase text-[#212121] shadow-sm active:scale-95 transition-all">
                                         <Phone size={18} className="text-blue-500" /> Phone
-                                    </button>
+                                    </a>
                                     <button onClick={() => setIsChatOpen(true)} className="flex py-5 bg-white border border-gray-200 rounded-3xl items-center justify-center gap-3 text-[11px] font-black uppercase text-[#212121] shadow-sm active:scale-95 transition-all relative">
                                         <MessageSquare size={18} className="text-[#00C853]" /> Chat
                                         {messages.length > 0 && <span className="absolute top-4 right-[25%] w-2 h-2 bg-red-500 rounded-full animate-ping" />}
@@ -650,7 +651,7 @@ export default function UserDashboard() {
                         </div>
                         <h2 className="text-3xl font-black uppercase tracking-tighter">{driver?.pilot || 'Alex'}</h2>
                         <p className="text-sm font-bold text-gray-400 mt-2">Calling...</p>
-                        <button onClick={() => setIsCalling(false)} className="mt-20 w-20 h-20 bg-red-500 rounded-full flex items-center justify-center shadow-lg active:scale-90 transition-transform"><Phone size={32} className="rotate-[135deg]" /></button>
+                        <a href={`tel:${driver?.phone || '+910000000000'}`} onClick={() => setIsCalling(false)} className="mt-20 px-8 py-4 bg-blue-500 rounded-full font-black text-sm uppercase tracking-widest shadow-lg flex items-center gap-3"><Phone size={24} /> Dial Number</a>
                     </motion.div>
                 )}
             </AnimatePresence>

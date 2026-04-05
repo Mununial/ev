@@ -244,7 +244,7 @@ export default function ProviderDashboard() {
                                                 <p className="text-sm font-black uppercase italic tracking-tighter">{rideRequest?.userName || 'Client Alpha'}</p>
                                                 <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">ID #HUB-{rideRequest?.id?.slice(-4)}</p>
                                             </div>
-                                            <button onClick={() => setIsCalling(true)} className="p-4 bg-ev-green/10 text-ev-green rounded-xl"><Phone size={18} /></button>
+                            <a href={`tel:${rideRequest?.userPhone || '+910000000000'}`} className="p-4 bg-ev-green/10 text-ev-green rounded-xl"><Phone size={18} /></a>
                                         </div>
 
                                         <div className="grid grid-cols-1 gap-4">
@@ -286,14 +286,14 @@ export default function ProviderDashboard() {
     />
             </div>
 
-            {/* Calling UI */}
+            {/* Calling UI (Native tel: intercepts before modal) */}
             <AnimatePresence>
                 {isCalling && (
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[6000] bg-slate-50 flex flex-col items-center justify-center p-10 text-center">
                         <div className="w-32 h-32 bg-primary-500 rounded-full flex items-center justify-center text-slate-900 mb-10 shadow-2xl animate-pulse"><Phone size={60} /></div>
                         <h2 className="text-4xl font-black italic uppercase tracking-tighter mb-4 text-slate-900">Calling Client...</h2>
                         <p className="text-slate-500 font-bold uppercase tracking-widest text-xs mb-12">{rideRequest?.userName || 'Alpha'}</p>
-                        <button onClick={() => setIsCalling(false)} className="w-20 h-20 bg-rose-500 rounded-full flex items-center justify-center text-slate-900 shadow-xl active:scale-90 transition-all"><X size={32} /></button>
+                        <a href={`tel:${rideRequest?.userPhone || '+910000000000'}`} onClick={() => setIsCalling(false)} className="mt-6 px-8 py-4 bg-blue-500 text-white rounded-full font-black text-sm uppercase tracking-widest shadow-lg flex items-center gap-3 mx-auto"><Phone size={24} /> Dial Number</a>
                     </motion.div>
                 )}
             </AnimatePresence>
