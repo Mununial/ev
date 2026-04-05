@@ -123,10 +123,11 @@ io.on('connection', (socket) => {
   // Provider goes online
   socket.on('provider_online', async (data) => {
     // Check if blocked
-    if (firestore) {
-        const userDoc = await firestore.collection('users').doc(data.uid || '').get();
+    if (firestore && data.uid) {
+        const userDoc = await firestore.collection('users').doc(data.uid).get();
         if (userDoc.exists && userDoc.data().blocked) {
             socket.emit('blocked_account');
+            socket.disconnect();
             return;
         }
     }
@@ -134,8 +135,10 @@ io.on('connection', (socket) => {
       socketId: socket.id,
       location: data.location,
       vehicle: data.vehicle,
-      status: 'available'
+      status: 'available',
+      uid: data.uid
     };
+    socket.join('providers'); // Join the dispatch room
     console.log(`Provider ${data.providerId} is online`);
     io.emit('fleet_update', onlineProviders);
   });
@@ -159,7 +162,8 @@ io.on('connection', (socket) => {
     console.log('New ride request:', rideData.id);
     activeRides[rideData.id] = null; 
     socket.join(rideData.id); 
-    io.emit('new_ride_request', rideData);
+    // ONLY EMIT TO AUTHORIZED PROVIDERS
+    io.to('providers').emit('new_ride_request', rideData);
   });
 
   // Provider accepts ride
@@ -352,6 +356,20 @@ app.post('/api/admin/toggle-block-pilot', async (req, res) => {
         if (!user.exists) return res.status(404).json({ success: false });
         const newStatus = !user.data().blocked;
         await userRef.update({ blocked: newStatus });
+        
+        // IF BLOCKED, FORCE DISCONNECT
+        if (newStatus) {
+            const pId = Object.keys(onlineProviders).find(id => onlineProviders[id].uid === uid);
+            if (pId) {
+                const sId = onlineProviders[pId].socketId;
+                io.to(sId).emit('blocked_account');
+                const socketToClose = io.sockets.sockets.get(sId);
+                if (socketToClose) socketToClose.disconnect();
+                delete onlineProviders[pId];
+                io.emit('fleet_update', onlineProviders);
+            }
+        }
+        
         res.json({ success: true, blocked: newStatus });
     } catch { res.status(500).json({ success: false }); }
 });

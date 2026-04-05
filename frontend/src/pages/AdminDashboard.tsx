@@ -29,6 +29,12 @@ export default function AdminDashboard() {
     const [currentView, setCurrentView] = useState<DashboardView>('ops');
     const [sosAlerts, setSosAlerts] = useState<any[]>([]);
     const [complaints, setComplaints] = useState<any[]>([]);
+    const [toast, setToast] = useState<{message: string, type: 'success' | 'error' | 'info'} | null>(null);
+
+    const showToast = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
+        setToast({ message, type });
+        setTimeout(() => setToast(null), 4000);
+    };
 
     const fetchVehicles = async () => {
         try {
@@ -59,11 +65,11 @@ export default function AdminDashboard() {
             });
             const data = await resp.json();
             if (data.success) {
-                alert(`Grid Action: Pilot is now ${data.blocked ? 'OFFLINE (Suspended)' : 'ONLINE (Active)'}`);
+                showToast(`PILOT ${data.blocked ? 'SUSPENDED' : 'RESTORED'}`, 'info');
                 fetchPilots();
             }
         } catch (e) {
-            alert('Admin Uplink Error');
+            showToast('ADMIN UPLINK ERROR', 'error');
         }
     };
 
@@ -148,10 +154,10 @@ export default function AdminDashboard() {
                 await fetchVehicles();
                 setIsAddModalOpen(false);
                 setNewEV({ id: '', plate: '', model: '' });
-                alert('Vehicle Registered in Command Center!');
+                showToast('VEHICLE REGISTERED', 'success');
             }
         } catch (e) {
-            alert('Grid Link Timeout - Check Connection');
+            showToast('GRID LINK TIMEOUT', 'error');
         }
     };
 
@@ -165,19 +171,20 @@ export default function AdminDashboard() {
             });
             const data = await resp.json();
             if (data.success) {
+                showToast('ASSET PURGED', 'info');
                 await fetchVehicles();
             } else {
-                alert('Vehicle is currently locked to an active Pilot Uplink.');
+                showToast('ASSET LOCKED TO ACTIVE PILOT', 'error');
             }
         } catch {
-            alert('Failed to connect to Grid Router.');
+            showToast('GRID ROUTER CONNECTION FAILED', 'error');
         }
     };
 
     const handleCreatePilot = async (e: React.FormEvent) => {
         e.preventDefault();
         if(!newPilot.name || !newPilot.email || !newPilot.password || !newPilot.vehicleType || !newPilot.vehicleNumber || !newPilot.phone) {
-             alert('All fields required for Pilot Provisioning');
+             showToast('ALL FIELDS REQUIRED', 'error');
              return;
         }
         try {
@@ -188,7 +195,7 @@ export default function AdminDashboard() {
             });
             const data = await resp.json();
             if (data.success) {
-                alert('Success: Pilot Provisioned. Credentials Active.');
+                showToast('PILOT PROVISIONED: ASSETS SYNCED', 'success');
                 setIsCreatePilotModalOpen(false);
                 setNewPilot({ name: '', email: '', password: '', vehicleType: 'EV', vehicleNumber: '', phone: '' });
                 fetchPilots();
@@ -764,6 +771,17 @@ export default function AdminDashboard() {
                 </AnimatePresence>
 
             </main>
+
+            <AnimatePresence>
+                {toast && (
+                    <motion.div initial={{ y: -50, opacity: 0 }} animate={{ y: 20, opacity: 1 }} exit={{ y: -50, opacity: 0 }} className="fixed top-0 left-0 right-0 z-[9999] flex justify-center pointer-events-none">
+                        <div className={`px-6 py-4 rounded-2xl shadow-2xl font-black text-[11px] uppercase tracking-widest flex items-center gap-3 border ${toast.type === 'error' ? 'bg-rose-500 text-white border-rose-400' : 'bg-slate-900 text-white border-slate-700'}`}>
+                            {toast.type === 'error' ? <AlertTriangle size={16} /> : <CheckCircle2 size={16} />}
+                            {toast.message}
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
     );
 }

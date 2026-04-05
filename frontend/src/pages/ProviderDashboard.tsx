@@ -24,6 +24,12 @@ export default function ProviderDashboard() {
     const [view, setView] = useState<'main' | 'stats'>('main');
     const [showSOS, setShowSOS] = useState(false);
     const [earnings] = useState({ today: '₹840', missions: 12 });
+    const [toast, setToast] = useState<{message: string, type: 'success' | 'error' | 'info'} | null>(null);
+
+    const showToast = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
+        setToast({ message, type });
+        setTimeout(() => setToast(null), 4000);
+    };
 
     useEffect(() => {
         const saved = localStorage.getItem('pilot_history');
@@ -82,15 +88,21 @@ export default function ProviderDashboard() {
         });
 
         socket.on('ride_already_accepted', () => {
-            alert('Mission Intercepted: This ride was securely taken by another Pilot!');
+            showToast('MISSION INTERCEPTED: Ride taken by another Pilot!', 'info');
             setStatus('idle');
             setRideRequest(null);
             setCurrentRoute([]);
         });
 
+        socket.on('blocked_account', () => {
+            showToast('GRID ACCESS REVOKED: Account Suspended.', 'error');
+            setTimeout(() => logout(), 3000);
+        });
+
         return () => {
             socket.off('new_ride_request');
             socket.off('ride_already_accepted');
+            socket.off('blocked_account');
         };
     }, [isOnline, status]);
 
@@ -421,6 +433,16 @@ export default function ProviderDashboard() {
                             </form>
                          </motion.div>
                     </div>
+                )}
+            </AnimatePresence>
+            <AnimatePresence>
+                {toast && (
+                    <motion.div initial={{ y: -50, opacity: 0 }} animate={{ y: 20, opacity: 1 }} exit={{ y: -50, opacity: 0 }} className="fixed top-0 left-0 right-0 z-[9999] flex justify-center pointer-events-none px-4">
+                        <div className={`px-6 py-4 rounded-2xl shadow-2xl font-black text-[10px] lg:text-[11px] uppercase tracking-widest flex items-center gap-3 border ${toast.type === 'error' ? 'bg-rose-500 text-white border-rose-400' : 'bg-slate-900 text-white border-slate-700'}`}>
+                            {toast.type === 'error' ? <AlertTriangle size={16} /> : <CheckCircle2 size={16} />}
+                            {toast.message}
+                        </div>
+                    </motion.div>
                 )}
             </AnimatePresence>
         </div>

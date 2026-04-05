@@ -59,6 +59,12 @@ export default function UserDashboard() {
     const [showComplaint, setShowComplaint] = useState(false);
     const [complaintText, setComplaintText] = useState('');
     const [rating, setRating] = useState(0);
+    const [toast, setToast] = useState<{message: string, type: 'success' | 'error' | 'info'} | null>(null);
+
+    const showToast = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
+        setToast({ message, type });
+        setTimeout(() => setToast(null), 4000);
+    };
 
     const chatEndRef = useRef<HTMLDivElement>(null);
     const dragControls = useDragControls();
@@ -212,8 +218,20 @@ export default function UserDashboard() {
                 setStatus('idle');
                 setRideId(null);
                 setDriver(null);
-                alert('Ride Cancelled by Pilot');
+                showToast('RIDE CANCELLED BY PILOT', 'info');
             }
+        });
+
+        socket.on('ride_already_accepted', () => {
+            showToast('MISSION INTERCEPTED: Ride taken by another Pilot!', 'info');
+            setStatus('idle');
+            setRideId(null);
+            setDriver(null);
+        });
+
+        socket.on('blocked_account', () => {
+            showToast('GRID ACCESS SUSPENDED', 'error');
+            setTimeout(() => logout(), 3000);
         });
 
         return () => {
@@ -222,6 +240,7 @@ export default function UserDashboard() {
              socket.off('status_change');
              socket.off('driver_location');
              socket.off('receive_message');
+             socket.off('blocked_account');
         };
     }, []);
 
@@ -255,11 +274,11 @@ export default function UserDashboard() {
                     location: userLocation || [20.35, 85.82] // Fallback to Campus
                 })
             });
-            alert('🚨 COMMAND CENTER ALERTED. Campus Security is on the way.');
+            showToast('COMMAND CENTER ALERTED', 'success');
             setIsSOSLoading(false);
             setShowSOS(false);
         } catch (e) {
-            alert('Uplink Failed. Check network.');
+            showToast('UPLINK FAILED', 'error');
             setIsSOSLoading(false);
         }
     };
@@ -808,6 +827,17 @@ export default function UserDashboard() {
                             <button onClick={submitComplaint} className="w-full py-5 bg-black text-white rounded-[20px] font-black uppercase tracking-widest active:scale-95 transition-transform shadow-xl mb-4">Submit Report</button>
                             <button onClick={() => setShowComplaint(false)} className="w-full text-xs font-bold text-gray-400 uppercase tracking-widest">Maybe Later</button>
                         </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            <AnimatePresence>
+                {toast && (
+                    <motion.div initial={{ y: -50, opacity: 0 }} animate={{ y: 20, opacity: 1 }} exit={{ y: -50, opacity: 0 }} className="fixed top-20 left-0 right-0 z-[9999] flex justify-center pointer-events-none px-6">
+                        <div className={`px-6 py-4 rounded-2xl shadow-2xl font-black text-[11px] uppercase tracking-widest flex items-center gap-3 border ${toast.type === 'error' ? 'bg-rose-500 text-white border-rose-400' : 'bg-slate-900 text-white border-slate-700'}`}>
+                            {toast.type === 'error' ? <AlertTriangle size={16} /> : <CheckCircle2 size={16} />}
+                            {toast.message}
+                        </div>
                     </motion.div>
                 )}
             </AnimatePresence>
