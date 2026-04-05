@@ -54,6 +54,7 @@ export default function UserDashboard() {
     const [newMessage, setNewMessage] = useState('');
     const [isCalling, setIsCalling] = useState(false);
     const [showSOS, setShowSOS] = useState(false);
+    const [cancelReasonOpen, setCancelReasonOpen] = useState(false);
     const [rating, setRating] = useState(0);
 
     const chatEndRef = useRef<HTMLDivElement>(null);
@@ -538,7 +539,7 @@ export default function UserDashboard() {
                                     </button>
                                 </div>
                                 
-                                <button onClick={cancelRide} className="w-full py-4 text-[10px] font-black text-red-500 uppercase tracking-widest hover:bg-red-50 rounded-2xl transition-all">Cancel Ride</button>
+                                <button onClick={() => setCancelReasonOpen(true)} className="w-full py-4 text-[10px] font-black text-red-500 uppercase tracking-widest hover:bg-red-50 rounded-2xl transition-all">Cancel Ride</button>
                                 
                                 {status === 'ongoing' && <button onClick={() => setShowSOS(true)} className="w-full bg-red-100/50 border border-red-200 p-5 rounded-3xl text-red-600 font-black text-[11px] uppercase flex items-center justify-center gap-3"><AlertTriangle size={16} /> Emergency SOS</button>}
                             </motion.div>
@@ -652,6 +653,31 @@ export default function UserDashboard() {
                         <h2 className="text-3xl font-black uppercase tracking-tighter">{driver?.pilot || 'Alex'}</h2>
                         <p className="text-sm font-bold text-gray-400 mt-2">Calling...</p>
                         <a href={`tel:${driver?.phone || '+910000000000'}`} onClick={() => setIsCalling(false)} className="mt-20 px-8 py-4 bg-blue-500 rounded-full font-black text-sm uppercase tracking-widest shadow-lg flex items-center gap-3"><Phone size={24} /> Dial Number</a>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            <AnimatePresence>
+                {cancelReasonOpen && (
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[6000] bg-black/60 flex flex-col justify-end p-2">
+                        <motion.div initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }} className="bg-white rounded-[32px] p-6 lg:p-10 shadow-2xl relative">
+                            <h2 className="text-2xl font-black uppercase tracking-tighter mb-6 underline decoration-red-500 decoration-4 underline-offset-4">Why Cancel?</h2>
+                            <div className="space-y-3">
+                                {["Driver requested extra cash", "Driver is not moving", "Changed my mind", "Wait time is too long"].map((rsn, idx) => (
+                                    <button 
+                                        key={idx} 
+                                        onClick={() => {
+                                            cancelRide();
+                                            setCancelReasonOpen(false);
+                                        }}
+                                        className="w-full text-left px-6 py-5 bg-gray-50 border border-gray-100 rounded-3xl font-bold text-sm hover:bg-red-50 hover:border-red-200 hover:text-red-600 transition-all active:scale-95"
+                                    >
+                                        {rsn}
+                                    </button>
+                                ))}
+                            </div>
+                            <button onClick={() => setCancelReasonOpen(false)} className="w-full mt-6 py-5 bg-black text-white rounded-full font-black text-xs uppercase tracking-[0.2em] shadow-xl active:scale-95 transition-all">Keep Ride</button>
+                        </motion.div>
                     </motion.div>
                 )}
             </AnimatePresence>

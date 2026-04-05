@@ -370,13 +370,14 @@ export default function AdminDashboard() {
                                             {dbPilots.length === 0 ? (
                                                 <tr><td colSpan={5} className="px-8 py-10 text-center text-slate-500 font-bold uppercase text-[10px]">No pilot profiles detected in sector</td></tr>
                                             ) : dbPilots.map((p: any) => {
-                                                const pSuffix = p.uid.split('_')[1]?.toUpperCase() || p.uid;
-                                                const liveData: any = Object.values(fleet).find((f: any) => f.providerId === pSuffix || f.providerId.includes(pSuffix));
+                                                const rawUid = p?.uid || '';
+                                                const pSuffix = rawUid.split('_')[1]?.toUpperCase() || rawUid;
+                                                const liveData: any = Object.values(fleet).find((f: any) => f?.providerId === pSuffix || f?.providerId?.includes(pSuffix));
                                                 const isOnline = !!liveData;
                                                 const isBlocked = !!p.blocked;
                                                 
                                                 return (
-                                                    <tr key={p.uid} className={`transition-colors group ${isBlocked ? 'bg-rose-50/50 grayscale' : 'hover:bg-slate-50 cursor-pointer'}`}>
+                                                    <tr key={p?.uid || Math.random()} className={`transition-colors group ${isBlocked ? 'bg-rose-50/50 grayscale' : 'hover:bg-slate-50 cursor-pointer'}`}>
                                                         <td className="px-8 py-6">
                                                             <div className="flex items-center gap-4">
                                                                 <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-slate-900 ${isBlocked ? 'bg-rose-200' : 'bg-indigo-600/20 text-indigo-600'}`}><Users size={18} /></div>
@@ -402,7 +403,7 @@ export default function AdminDashboard() {
                                                         <td className="px-8 py-6 text-right">
                                                             <div className="flex items-center justify-end gap-4">
                                                                 {!isBlocked && isOnline && <p className="text-[10px] font-black text-slate-500">{liveData.vehicle?.battery}% PWR</p>}
-                                                                <button onClick={() => handleBlockPilot(p.uid)} className={`px-4 py-2 ${isBlocked ? 'bg-slate-800 text-white hover:bg-slate-900' : 'bg-rose-100 text-rose-500 hover:bg-rose-200'} rounded-lg font-black text-[9px] uppercase tracking-widest transition-all shadow-sm`}>{isBlocked ? 'RESTORE' : 'BLOCK'}</button>
+                                                                <button onClick={() => { if(p?.uid) handleBlockPilot(p.uid); }} className={`px-4 py-2 ${isBlocked ? 'bg-slate-800 text-white hover:bg-slate-900' : 'bg-rose-100 text-rose-500 hover:bg-rose-200'} rounded-lg font-black text-[9px] uppercase tracking-widest transition-all shadow-sm`}>{isBlocked ? 'RESTORE' : 'BLOCK'}</button>
                                                             </div>
                                                         </td>
                                                     </tr>

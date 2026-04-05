@@ -44,15 +44,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
         const provider = new GoogleAuthProvider();
         const result = await signInWithPopup(auth, provider);
-        const u = {
-            uid: result.user.uid,
-            displayName: result.user.displayName,
-            email: result.user.email,
-            role: 'user', // Default to user for google sign-in
-            photoURL: result.user.photoURL
-        };
-        // Option: Sync with backend if needed
-        setUser(u);
+        
+        // Fetch real role from backend
+        const resp = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: result.user.email, isGoogle: true, uid: result.user.uid })
+        });
+        const data = await resp.json();
+        
+        if (data.success) {
+            setUser({ ...data.user, photoURL: result.user.photoURL });
+        } else {
+            // Not registered yet, create default user
+            const regResp = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/register`, {
+                 method: 'POST',
+                 headers: { 'Content-Type': 'application/json' },
+                 body: JSON.stringify({ name: result.user.displayName, email: result.user.email, password: 'GOOGLE_AUTH', role: 'user', uid: result.user.uid })
+            });
+            const regData = await regResp.json();
+            if (regData.success) setUser({ ...regData.user, photoURL: result.user.photoURL });
+        }
         setLoading(false);
     } catch (e) {
         console.error(e);
