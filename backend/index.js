@@ -7,6 +7,9 @@ const nodemailer = require('nodemailer');
 const { OAuth2Client } = require('google-auth-library');
 const bcrypt = require('bcrypt');
 const dns = require('dns');
+const admin = require('firebase-admin'); // Firebase Admin SDK
+const fs = require('fs');
+const path = require('path');
 
 // Force Node.js to use IPv4 first (fixes Render ENETUNREACH IPv6 issue)
 dns.setDefaultResultOrder('ipv4first');
@@ -20,6 +23,22 @@ const io = new Server(server, {
 });
 
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+
+// Initialize Firebase Admin (Assuming serviceAccountKey.json is in the backend root)
+const serviceAccountPath = path.join(__dirname, 'serviceAccountKey.json');
+if (fs.existsSync(serviceAccountPath)) {
+  try {
+    const serviceAccount = JSON.parse(fs.readFileSync(serviceAccountPath, 'utf8'));
+    admin.initializeApp({
+      credential: admin.credential.cert(serviceAccount)
+    });
+    console.log('Firebase Admin SDK Initialized Successfully.');
+  } catch (err) {
+    console.error('Failed to parse serviceAccountKey.json:', err);
+  }
+} else {
+  console.warn('WARNING: serviceAccountKey.json not found. Firebase Admin features (like Pilot creation) will be disabled.');
+}
 
 // Email Transporter (Using Gmail via App Password)
 const transporter = nodemailer.createTransport({
@@ -52,12 +71,6 @@ app.post('/api/auth/google', async (req, res) => {
     res.status(401).json({ success: false, error: 'Invalid Google Token' });
   }
 });
-
-// Firebase Admin Setup (User needs to add serviceAccountKey.json)
-// admin.initializeApp({
-//   credential: admin.credential.cert(require("./serviceAccountKey.json")),
-//   databaseURL: "YOUR_FIREBASE_DB_URL"
-// });
 
 const PORT = process.env.PORT || 5000;
 
@@ -241,8 +254,6 @@ app.delete('/api/vehicles', (req, res) => {
 });
 
 // Database Simulation
-const fs = require('fs');
-const path = require('path');
 const dbPath = path.join(__dirname, 'db.json');
 
 let db = { users: [], uniquePasswords: [] };
@@ -277,25 +288,49 @@ app.post('/api/auth/send-otp', async (req, res) => {
 });
 
 // Admin Pilot Creation API
-app.post('/api/admin/create-pilot', (req, res) => {
+app.post('/api/admin/create-pilot', async (req, res) => {
     const { name, email, password, vehicleType, vehicleNumber } = req.body;
     
+    // Check if email already exists
     const existingUser = db.users.find(u => u.email === email);
-    if (existingUser) return res.status(400).json({ success: false, error: 'Email already exists' });
+    if (existingUser) return res.status(400).json({ success: false, error: `Email already exists as a ${existingUser.role.toUpperCase()}. One account per email only.` });
     
-    const salt = bcrypt.genSaltSync(10);
-    const hashedPassword = bcrypt.hashSync(password, salt);
-    
-    const newUser = {
-        uid: 'PILOT_' + Math.random().toString(36).substr(2, 9),
-        name, email, password: hashedPassword, role: 'provider', vehicleType, vehicleNumber
-    };
-    
-    db.users.push(newUser);
-    db.uniquePasswords.push(hashedPassword);
-    saveDB();
-    
-    res.json({ success: true, user: newUser });
+    try {
+        // Step 1: Create in Firebase if Admin SDK is initialized
+        let firebaseUid = 'PILOT_' + Math.random().toString(36).substr(2, 9);
+        if (admin.apps.length > 0) {
+            try {
+                const fUser = await admin.auth().createUser({
+                    email,
+                    password,
+                    displayName: name
+                });
+                firebaseUid = fUser.uid;
+                console.log(`Firebase Identity created for Pilot ${email}`);
+            } catch (authError) {
+                console.error('Firebase Pilot Creation Error:', authError);
+                return res.status(500).json({ success: false, error: 'Failed to register Pilot in Firebase.' });
+            }
+        }
+
+        // Step 2: Save metadata in Grid DB
+        const salt = bcrypt.genSaltSync(10);
+        const hashedPassword = bcrypt.hashSync(password, salt);
+        
+        const newUser = {
+            uid: firebaseUid,
+            name, email, password: hashedPassword, role: 'provider', vehicleType, vehicleNumber
+        };
+        
+        db.users.push(newUser);
+        db.uniquePasswords.push(hashedPassword);
+        saveDB();
+        
+        res.json({ success: true, user: { uid: firebaseUid, displayName: name, email, role: 'provider' } });
+    } catch (err) {
+        console.error('Admin Pilot Creation Error:', err);
+        res.status(500).json({ success: false, error: 'Internal Grid Error' });
+    }
 });
 
 app.get('/api/admin/pilots', (req, res) => {
@@ -320,22 +355,20 @@ app.post('/api/auth/verify-otp', (req, res) => {
     const stored = otpStore[email];
     
     if (stored && stored.otp === otp && Date.now() < stored.expires) {
-        // We delete it during reset-password, but for register it just verifies.
-        // If we delete it here, register won't know it's verified securely if we rely on it, but register currently doesn't check otpStore.
         res.json({ success: true });
     } else {
         res.status(400).json({ success: false, error: 'Invalid or expired OTP' });
     }
 });
 
-// Auth Register and Login combined into a unified controller for security rules
+// Auth Register (Metadata only, assuming Firebase User created by Client)
 app.post('/api/auth/register', (req, res) => {
     const { name, email, password, role, vehicleType, vehicleNumber, uid } = req.body;
     
-    // Check if email already used for any role
+    // One email = One account (Role is locked)
     const existingUser = db.users.find(u => u.email === email);
     if (existingUser) {
-        return res.status(400).json({ success: false, error: 'Email already registered. Please login.' });
+        return res.status(400).json({ success: false, error: `Account for ${email} already registered as a ${existingUser.role.toUpperCase()}. User identity is fixed.` });
     }
     
     const salt = bcrypt.genSaltSync(10);
@@ -353,117 +386,62 @@ app.post('/api/auth/register', (req, res) => {
     res.json({ success: true, user: { uid: newUser.uid, displayName: name, email, role, vehicleType, vehicleNumber } });
 });
 
+// Login Endpoint (Handles Migration and UI Sync)
 app.post('/api/auth/login', (req, res) => {
     const { email, password, requestedRole, uid } = req.body;
     
-    // Find user by email or uid
-    const user = db.users.find(u => u.email === email || (uid && u.uid === uid));
+    // Migration logic: Find by email since UIDs might change during Firebase move
+    const user = db.users.find(u => u.email === email);
     
     if (!user) {
         return res.status(400).json({ success: false, error: 'User mapping not found in Grid DB' });
     }
 
-    // If login is coming via Firebase, password verification in backend is redundant but we can keep it as a fallback
-    if (!uid && !bcrypt.compareSync(password, user.password)) {
-        return res.status(400).json({ success: false, error: 'Invalid credentials' });
+    // UID Sync: If current user has a placeholder UID, update it to Firebase UID on first login
+    if (uid && user.uid !== uid) {
+        user.uid = uid;
+        saveDB();
+        console.log(`Grid UID Sync: User ${email} identity mapped.`);
     }
-    
+
     if (user.blocked) {
         return res.status(403).json({ success: false, error: 'Access Denied: Your account has been suspended by the Admin.' });
     }
     
     if (requestedRole && user.role !== requestedRole && user.role !== 'admin') {
-        return res.status(400).json({ success: false, error: `This account is not registered as a ${requestedRole.toUpperCase()}` });
+        return res.status(400).json({ success: false, error: `Account Unauthorized: This account is registered exclusively as a ${user.role.toUpperCase()}.` });
+    }
+
+    // Fallback password check (only if not using Firebase Login)
+    if (!uid && !bcrypt.compareSync(password, user.password)) {
+        return res.status(400).json({ success: false, error: 'Invalid credentials' });
     }
     
     res.json({ success: true, user: { uid: user.uid, displayName: user.name, email: user.email, role: user.role, vehicleType: user.vehicleType, vehicleNumber: user.vehicleNumber } });
 });
 
-// Forgot Password
-app.post('/api/auth/forgot-password', async (req, res) => {
-    const { email } = req.body;
-    const user = db.users.find(u => u.email === email);
-    if (!user) return res.status(400).json({ success: false, error: 'User not found' });
-    
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    otpStore[email] = { otp, expires: Date.now() + 600000 };
-    
-    // Auto-detect frontend URL from referer
-    const referer = req.get('referer') || '';
-    const origin = req.get('origin') || '';
-    const frontendBase = (referer || origin || 'https://ev-frontend-w9i8.onrender.com').replace(/\/$/, '');
-    const resetUrl = `${frontendBase}/auth?email=${encodeURIComponent(email)}&otp=${otp}&mode=otp&ctx=forgot`;
-
-    try {
-        await transporter.sendMail({
-            from: process.env.MAIL_DEFAULT_SENDER,
-            to: email,
-            subject: `SmileSphere Password Reset - ${otp}`,
-            html: `
-                <div style="font-family: 'Inter', sans-serif; background: #0f172a; color: #f8fafc; padding: 40px; border-radius: 24px; max-width: 500px; margin: auto; border: 1px solid #1e293b;">
-                    <div style="background: #22c55e; width: 40px; height: 40px; border-radius: 12px; margin-bottom: 24px;"></div>
-                    <h1 style="font-size: 24px; font-weight: 800; margin-bottom: 8px;">Reset your password?</h1>
-                    <p style="color: #94a3b8; font-size: 14px; margin-bottom: 32px;">We received a request to reset your SmileSphere EV credentials. Use the code below or the secure link.</p>
-                    
-                    <div style="background: rgba(255,255,255,0.05); padding: 32px; border-radius: 16px; text-align: center; margin-bottom: 32px;">
-                        <span style="font-size: 36px; font-weight: 800; letter-spacing: 8px; color: #fff;">${otp}</span>
-                    </div>
-
-                    <a href="${resetUrl}" style="display: block; background: #22c55e; color: #0f172a; text-align: center; padding: 18px; border-radius: 16px; text-decoration: none; font-weight: 800; font-size: 14px; text-transform: uppercase;">Reset Password Now</a>
-                    
-                    <p style="font-size: 12px; color: #475569; margin-top: 40px; text-align: center;">This link expires in 10 minutes.</p>
-                </div>
-            `
-        });
-        res.json({ success: true, message: 'Reset instructions sent' });
-    } catch (e) {
-        console.error('SMTP Forgot Password Error:', e);
-        res.status(500).json({ success: false, error: 'Failed to send email' });
-    }
-});
-
-// Reset Password
-app.post('/api/auth/reset-password', (req, res) => {
-    const { email, otp, newPassword } = req.body;
-    const stored = otpStore[email];
-    if (!stored || stored.otp !== otp || Date.now() > stored.expires) {
-        return res.status(400).json({ success: false, error: 'Invalid or expired OTP' });
-    }
-    
-    const user = db.users.find(u => u.email === email);
-    if (!user) return res.status(400).json({ success: false, error: 'User not found' });
-    
-    let isReused = false;
-    for (const hash of db.uniquePasswords) {
-        if (bcrypt.compareSync(newPassword, String(hash).substring(0, 60))) { isReused = true; break; }
-    }
-    if (isReused) {
-        return res.status(400).json({ success: false, error: 'Password is too common or used by another user.' });
-    }
-    
-    const salt = bcrypt.genSaltSync(10);
-    const hashedPassword = bcrypt.hashSync(newPassword, salt);
-    
-    user.password = hashedPassword;
-    db.uniquePasswords.push(hashedPassword);
-    delete otpStore[email];
-    saveDB();
-    res.json({ success: true, error: null });
-});
-
-app.post('/api/auth/delete', (req, res) => {
+app.post('/api/auth/delete', async (req, res) => {
     const { email } = req.body;
     const userToDel = db.users.find(u => u.email === email);
     if (!userToDel) return res.status(404).json({ success: false, error: 'User not found' });
     
-    // Purge user's hash from the unique credential check pool
-    db.uniquePasswords = db.uniquePasswords.filter(h => h !== userToDel.password);
-    
-    // Purge user data document
-    db.users = db.users.filter(u => u.email !== email);
-    saveDB();
-    
-    res.json({ success: true, message: 'Account and associated credential hashes purged securely' });
+    try {
+        // Step 1: Remove from Firebase if Admin SDK is online
+        if (admin.apps.length > 0) {
+            try {
+                const fUser = await admin.auth().getUserByEmail(email);
+                await admin.auth().deleteUser(fUser.uid);
+            } catch (e) { console.warn('User not found in Firebase. Continuing DB purge.'); }
+        }
+
+        // Step 2: Purge from Grid DB
+        db.uniquePasswords = db.uniquePasswords.filter(h => h !== userToDel.password);
+        db.users = db.users.filter(u => u.email !== email);
+        saveDB();
+        res.json({ success: true, message: 'Account securely purged from Grid Ecosystem.' });
+    } catch (err) {
+        res.status(500).json({ success: false, error: 'Failed to purge account sync.' });
+    }
 });
 
 app.get('/', (req, res) => {
