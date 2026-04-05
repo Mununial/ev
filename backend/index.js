@@ -281,6 +281,15 @@ async function handleCreatePilot(req, res) {
 
 
 app.get('/api/admin/pilots', async (req, res) => {
+    handleGetPilots(req, res);
+});
+
+// Fallback for legacy frontend fetch
+app.get('/admin/pilots', async (req, res) => {
+    handleGetPilots(req, res);
+});
+
+async function handleGetPilots(req, res) {
     if (!firestore) return res.json([]);
     try {
         const pilotsSnapshot = await firestore.collection('users').where('role', '==', 'provider').get();
@@ -289,7 +298,8 @@ app.get('/api/admin/pilots', async (req, res) => {
         }));
         res.json(pilots);
     } catch { res.json([]); }
-});
+}
+
 
 app.post('/api/admin/toggle-block-pilot', async (req, res) => {
     const { uid } = req.body;

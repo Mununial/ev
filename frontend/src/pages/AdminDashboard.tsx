@@ -149,6 +149,7 @@ export default function AdminDashboard() {
                 alert('Success: Pilot Provisioned. Credentials Active.');
                 setIsCreatePilotModalOpen(false);
                 setNewPilot({ name: '', email: '', password: '', vehicleType: 'EV', vehicleNumber: '' });
+                fetchPilots();
             } else {
                 alert(data.error || 'Failed to provision pilot');
             }
