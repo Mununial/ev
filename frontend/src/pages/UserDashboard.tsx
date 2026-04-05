@@ -7,7 +7,7 @@ import {
     Battery, User as UserIcon, IndianRupee, Mic, Headset, AlertCircle, Zap,
     ChevronUp, Clock, RotateCcw, Search, ShieldCheck, Map as MapIcon
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useDragControls } from 'framer-motion';
 import { KIIT_LOCATIONS, CAMPUS_CENTER } from '../data/kiitData';
 import { useAuth } from '../context/AuthContext';
 import { RideOrchestrator, RidePlan, ClassSchedule } from '../utils/rideSystem';
