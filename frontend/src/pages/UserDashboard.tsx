@@ -249,15 +249,16 @@ export default function UserDashboard() {
                 <AnimatePresence>
                     {isOpen && (
                         <motion.div 
-                            initial={{ opacity: 0, y: -10 }} 
-                            animate={{ opacity: 1, y: 0 }} 
-                            exit={{ opacity: 0, y: -10 }} 
-                            className="absolute top-full left-0 right-0 mt-2 bg-white/95 backdrop-blur-3xl border border-slate-300 rounded-2xl shadow-[0_30px_60px_rgba(0,0,0,0.4)] z-[2000] max-h-72 overflow-y-auto p-2 custom-scrollbar space-y-1"
+                            initial={{ opacity: 0, height: 0 }} 
+                            animate={{ opacity: 1, height: 'auto' }} 
+                            exit={{ opacity: 0, height: 0 }} 
+                            className="relative mt-2 bg-white/50 backdrop-blur-3xl border border-slate-300 rounded-2xl overflow-hidden z-[500] shadow-inner"
                         >
-                            {KIIT_LOCATIONS.map(loc => (
-                                <div key={loc.id} onClick={() => { onChange(loc.id); setIsOpen(false); }} className={`p-4 rounded-xl text-[11px] font-black uppercase tracking-widest cursor-pointer transition-all active:scale-[0.98] ${value === loc.id ? 'bg-primary-500 text-white shadow-lg' : 'hover:bg-slate-100 text-slate-500'}`}>{loc.name}</div>
-                            ))}
-                            <div className="h-4" /> {/* Extra bottom padding for mobile scroll safety */}
+                            <div className="max-h-60 overflow-y-auto p-2 custom-scrollbar space-y-1">
+                                {KIIT_LOCATIONS.map(loc => (
+                                    <div key={loc.id} onClick={() => { onChange(loc.id); setIsOpen(false); }} className={`p-4 rounded-xl text-[11px] font-black uppercase tracking-widest cursor-pointer transition-all active:scale-[0.98] ${value === loc.id ? 'bg-primary-500 text-white shadow-lg' : 'hover:bg-slate-100 text-slate-500'}`}>{loc.name}</div>
+                                ))}
+                            </div>
                         </motion.div>
                     )}
                 </AnimatePresence>
